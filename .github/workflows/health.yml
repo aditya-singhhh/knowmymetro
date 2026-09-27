@@ -61,5 +61,22 @@ jobs:
               err = (b.get('error') or {}).get('message') or ''
               print(f"::notice title=Build {b.get('status')} ({b.get('buildProfile')})::{url or b.get('id')}")
               if err: print(f"::error title=Build error::{err[:900]}")
-              if b.get('logFiles'): print(f"::notice title=Logs::{b['logFiles'][0][:300]}")
+              if b.get('status') == 'ERRORED':
+                  import urllib.request, re
+                  for u in b.get('logFiles') or []:
+                      try: txt = urllib.request.urlopen(u, timeout=30).read().decode('utf8', 'replace')
+                      except Exception as e: print(f"::warning::log fetch failed {e}"); continue
+                      lines = []
+                      for line in txt.splitlines():
+                          try: msg = json.loads(line).get('msg', line)
+                          except Exception: msg = line
+                          lines.append(str(msg))
+                      hits = [i for i, l in enumerate(lines) if re.search(r'error|Error|Unable to resolve|Cannot find|failed', l)]
+                      shown = set()
+                      for i in hits[:12]:
+                          for j in range(max(0, i - 1), min(len(lines), i + 4)):
+                              if j in shown: continue
+                              shown.add(j); print(f"::error title=log {j}::{lines[j][:600]}")
+                      for l in lines[-8:]: print(f"::warning title=log tail::{l[:600]}")
+                  break
           PY
