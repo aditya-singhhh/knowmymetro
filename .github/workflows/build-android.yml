@@ -1,0 +1,35 @@
+name: Build Android app (EAS)
+# Builds an installable Android app on Expo's servers. Run it from the Actions tab.
+# Needs repository secret EXPO_TOKEN (expo.dev -> Account settings -> Access tokens).
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'preview = installable APK for testing, production = Play Store bundle'
+        required: true
+        default: preview
+        type: choice
+        options: [preview, production]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+        working-directory: .
+      - name: Link Expo project (first run creates it)
+        run: eas init --non-interactive --force
+      - name: Configure over-the-air updates
+        run: eas update:configure --non-interactive || true
+      - name: Build
+        run: eas build --platform android --profile ${{ inputs.profile }} --non-interactive --no-wait
