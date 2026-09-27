@@ -38,7 +38,7 @@ export default function Home() {
         {commute ? (
           <View style={{ gap: space.m }}>
             <SectionHeader title={offset === 0 ? t('c_today') : offset === 1 ? t('c_tom') : t('c_day', { d: dayFromToday(offset).toLocaleDateString(app.locale, { weekday: 'long' }) })} action={t('edit')} onAction={() => router.navigate('/(tabs)/(plan)')} />
-            <CommuteCard option={plan.data && plan.data.best >= 0 ? plan.data.options[plan.data.best] : null} loading={plan.loading && !plan.data} offset={offset} now={now} />
+            {plan.data || plan.loading ? <CommuteCard option={plan.data && plan.data.best >= 0 ? plan.data.options[plan.data.best] : null} loading={plan.loading && !plan.data} offset={offset} now={now} /> : null}
             {plan.error && plan.data ? <Notice text={t('offline')} /> : null}
             {plan.error && !plan.data ? <Card><T v="sub" color={c.ink2}>{t('err_net')}</T><View style={{ height: space.m }} /><Button label={t('retry')} kind="plain" onPress={plan.retry} /></Card> : null}
             {plan.data?.error ? <Notice text={plan.data.error === 'none-in-time' ? t('no_trains', { s: stationName(tt, commute.to, lang), t: commute.time, a: plan.data.earliestArrival ? fmt(plan.data.earliestArrival) : '—' }) : t('pick_two')} tone="bad" /> : null}

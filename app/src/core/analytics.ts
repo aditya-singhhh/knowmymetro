@@ -28,9 +28,9 @@ export function track(event: AppEvent, params: Params = {}) {
 }
 
 export function trackScreen(name: string) {
-  logScreenView(getAnalytics(), { screen_name: name, screen_class: name }).catch(() => undefined);
+  try { logScreenView(getAnalytics(), { screen_name: name, screen_class: name }).catch(() => undefined); } catch { /* ignore */ }
 }
 
 export function setRiderProperty(name: 'lang' | 'home_line' | 'has_commute', value: string) {
-  setUserProperty(getAnalytics(), name, value).catch(() => undefined);
+  try { setUserProperty(getAnalytics(), name, value).catch(() => undefined); } catch { /* ignore */ }
 }

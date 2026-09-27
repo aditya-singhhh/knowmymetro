@@ -2,7 +2,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LANGS, nearestStation, pad2, stationName, type Lang } from '@kmm/shared';
 import { setRiderProperty, track } from '@/core/analytics';
@@ -50,7 +50,7 @@ export default function Onboarding() {
     <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top + space.xl }}>
       <ScrollView contentContainerStyle={{ padding: space.l, gap: space.xl, paddingBottom: insets.bottom + space.xl }} keyboardShouldPersistTaps="handled">
         <View style={{ gap: space.s }}>
-          <View style={[s.logo, { backgroundColor: c.tint }]}><T v="title" color={c.onTint}>K</T></View>
+          <Image source={require('@/assets/images/icon.png')} style={s.logo} accessibilityIgnoresInvertColors />
           <T v="large">KnowMyMetro</T>
           <T v="body" color={c.ink2}>{t('setup_sub')}</T>
         </View>
@@ -101,7 +101,7 @@ export default function Onboarding() {
 }
 
 const s = StyleSheet.create({
-  logo: { width: 52, height: 52, borderRadius: radius.m, alignItems: 'center', justifyContent: 'center', marginBottom: space.s },
+  logo: { width: 60, height: 60, borderRadius: 14, marginBottom: space.s },
   langRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: space.l },
   field: { paddingVertical: space.m, paddingHorizontal: space.l, gap: 2 },
 });

@@ -38,7 +38,7 @@ export function initFirebase(): Promise<string | null> {
   return ready;
 }
 
-export const currentUid = () => getAuth().currentUser?.uid ?? null;
+export const currentUid = () => { try { return getAuth().currentUser?.uid ?? null; } catch { return null; } };
 export const onUser = (cb: (uid: string | null) => void) => onAuthStateChanged(getAuth(), (u) => cb(u?.uid ?? null));
 
 export function reportError(e: unknown) {
