@@ -3,6 +3,11 @@ name: Deploy server (Firebase)
 # Needs repository secret FIREBASE_SERVICE_ACCOUNT (the JSON key of a service account).
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: 'What to deploy'
+        required: true
+        default: functions,firestore,storage
   push:
     branches: [main]
     paths: ['functions/**', 'shared/**', 'data/**', 'firestore.rules', 'storage.rules', 'firebase.json']
@@ -26,7 +31,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: |
           set -o pipefail
-          npx --yes firebase-tools@14 deploy --only functions,firestore,storage --project knowmymetro --non-interactive --force 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+          npx --yes firebase-tools@14 deploy --only ${{ inputs.only || 'functions,firestore,storage' }} --project knowmymetro --non-interactive --force 2>&1 | tee "$RUNNER_TEMP/deploy.log"
       - name: Report errors as annotations
         if: failure()
         run: |
