@@ -1,0 +1,44 @@
+rules_version = '2';
+// KnowMyMetro security rules.
+// Riders are signed in anonymously. Each rider owns only their own data.
+// Crowd statistics, interchange data and tuning are server-only: they are the app's advantage.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // profile, saved trips, push tokens
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+      match /{sub=**} { allow read, write: if isOwner(uid); }
+    }
+
+    // one-tap crowd report: create only, one per rider per train per day (id = uid_date_train)
+    match /reports/{id} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && id.matches(request.auth.uid + '_[0-9]{8}_.+')
+        && request.resource.data.keys().hasOnly(['uid', 'service', 'origin', 'start', 'board', 'level', 'createdAt'])
+        && request.resource.data.level in [0, 1, 2]
+        && request.resource.data.board is string && request.resource.data.board.size() <= 5
+        && request.resource.data.createdAt == request.time;
+    }
+
+    // "I know this change": coach and minutes for an interchange
+    match /interchangeReports/{id} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'key', 'coach', 'minutes', 'createdAt'])
+        && (request.resource.data.coach == null || request.resource.data.coach in ['front', 'middle', 'rear'])
+        && request.resource.data.minutes is number && request.resource.data.minutes > 0 && request.resource.data.minutes < 20
+        && request.resource.data.createdAt == request.time;
+    }
+
+    // public, read-only for the app
+    match /timetable/{doc} { allow read: if true; }
+    match /disruptions/{doc} { allow read: if signedIn(); }
+
+    // everything else (crowdStats, interchanges, config) is server-only
+    match /{document=**} { allow read, write: if false; }
+  }
+}

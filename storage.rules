@@ -1,0 +1,8 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // published timetable files are public data (from BMRCL's open timetable)
+    match /timetable/{file} { allow read: if true; allow write: if false; }
+    match /{all=**} { allow read, write: if false; }
+  }
+}
