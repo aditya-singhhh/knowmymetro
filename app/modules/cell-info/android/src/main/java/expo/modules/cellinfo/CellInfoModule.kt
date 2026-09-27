@@ -64,9 +64,25 @@ class CellInfoModule : Module() {
   private fun cached(tm: TelephonyManager): List<Map<String, Any?>> =
     try { tm.allCellInfo?.mapNotNull(::describe) ?: emptyList() } catch (e: SecurityException) { emptyList() }
 
-  // mcc/mnc strings exist from Android 9 (API 28)
-  private fun mcc(id: android.telephony.CellIdentity): String? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) id.mccString else null
-  private fun mnc(id: android.telephony.CellIdentity): String? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) id.mncString else null
+  // mcc/mnc strings exist on each cell type from Android 9 (API 28); the base CellIdentity doesn't expose them
+  private fun mcc(id: android.telephony.CellIdentity): String? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+    return when (id) {
+      is android.telephony.CellIdentityLte -> id.mccString
+      is android.telephony.CellIdentityWcdma -> id.mccString
+      is android.telephony.CellIdentityGsm -> id.mccString
+      else -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && id is android.telephony.CellIdentityNr) id.mccString else null
+    }
+  }
+  private fun mnc(id: android.telephony.CellIdentity): String? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+    return when (id) {
+      is android.telephony.CellIdentityLte -> id.mncString
+      is android.telephony.CellIdentityWcdma -> id.mncString
+      is android.telephony.CellIdentityGsm -> id.mncString
+      else -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && id is android.telephony.CellIdentityNr) id.mncString else null
+    }
+  }
 
   private fun ok(v: Int): Int? = if (v == Int.MAX_VALUE || v == CellInfo.UNAVAILABLE) null else v
   private fun okL(v: Long): Long? = if (v == Long.MAX_VALUE) null else v
