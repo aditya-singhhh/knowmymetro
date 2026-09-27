@@ -43,9 +43,9 @@ jobs:
           tmp = os.environ['RUNNER_TEMP']
           try:
               for b in json.load(open(f'{tmp}/build.json')):
-                  print(f"::notice title=Build {b.get('status')}::https://expo.dev/accounts/{b['project']['ownerAccount']['name']}/projects/{b['project']['slug']}/builds/{b['id']}")
+                  if b.get('error'): print(f"::error title=Build error::{(b['error'].get('message') or '')[:900]}")
+                  print(f"::notice title=Build {b.get('status')}::{b.get('id')}")
                   if b.get('artifacts', {}).get('buildUrl'): print(f"::notice title=Download::{b['artifacts']['buildUrl']}")
-                  if b.get('error'): print(f"::error::{b['error'].get('message')}")
           except Exception as e:
               print(f"::warning::no build json ({e})")
           for line in open(f'{tmp}/build.err').read().splitlines()[-25:]:

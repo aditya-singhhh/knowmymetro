@@ -59,5 +59,7 @@ jobs:
           for b in builds:
               url = (b.get('artifacts') or {}).get('buildUrl') or ''
               err = (b.get('error') or {}).get('message') or ''
-              print(f"::notice title=Build {b.get('status')} ({b.get('buildProfile')})::{url or err or b.get('id')}")
+              print(f"::notice title=Build {b.get('status')} ({b.get('buildProfile')})::{url or b.get('id')}")
+              if err: print(f"::error title=Build error::{err[:900]}")
+              if b.get('logFiles'): print(f"::notice title=Logs::{b['logFiles'][0][:300]}")
           PY
