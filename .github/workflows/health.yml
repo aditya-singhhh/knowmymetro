@@ -62,14 +62,20 @@ jobs:
               print(f"::notice title=Build {b.get('status')} ({b.get('buildProfile')})::{url or b.get('id')}")
               if err: print(f"::error title=Build error::{err[:900]}")
               if b.get('status') == 'ERRORED':
-                  import urllib.request, re
-                  for u in b.get('logFiles') or []:
-                      try:
-                          raw = urllib.request.urlopen(u, timeout=30).read()
-                          if raw[:2] == b'\x1f\x8b':
-                              import gzip; raw = gzip.decompress(raw)
-                          txt = raw.decode('utf8', 'replace')
-                      except Exception as e: print(f"::warning::log fetch failed {e}"); continue
+                  import re
+                  for n, u in enumerate(b.get('logFiles') or []):
+                      import subprocess
+                      subprocess.run(['curl', '-sSL', '--compressed', '-o', f'log{n}', u])
+                      head = open(f'log{n}', 'rb').read(8)
+                      print(f"::notice title=log file {n}::{subprocess.run(['file', f'log{n}'], capture_output=True, text=True).stdout.strip()} {head.hex()}")
+                      raw = open(f'log{n}', 'rb').read()
+                      for dec in ('gzip -dc', 'zstd -dc', 'brotli -dc', 'xz -dc'):
+                          r = subprocess.run(f'{dec} log{n}', shell=True, capture_output=True)
+                          if r.returncode == 0 and r.stdout: raw = r.stdout; print(f"::notice::decoded with {dec}"); break
+                      if raw[:3] != b'{"n' and b'ustar' in raw[:600]:
+                          import tarfile, io
+                          t = tarfile.open(fileobj=io.BytesIO(raw)); raw = b''.join(t.extractfile(m).read() for m in t.getmembers() if m.isfile())
+                      txt = raw.decode('utf8', 'replace')
                       lines = []
                       for line in txt.splitlines():
                           try: msg = json.loads(line).get('msg', line)
