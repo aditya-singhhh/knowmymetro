@@ -1,10 +1,10 @@
 import { getLocales } from 'expo-localization';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import {
   LANGS, LOCALE, translate, type Lang, type Pace, type Priority, type StringKey, type TimeMode, type Timetable,
 } from '@kmm/shared';
-import { initFirebase, syncCommute, syncProfile } from './firebase';
+import { initFirebase, onUser, syncCommute, syncProfile } from './firebase';
 import { load, save } from './storage';
 import { checkForNewTimetable, loadTimetable } from './timetable';
 
@@ -52,6 +52,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const sub = AppState.addEventListener('change', (s) => { if (s === 'active') refresh(); });
     return () => { alive = false; sub.remove(); };
   }, [tt]);
+
+  // A new anonymous id (first launch, or after Firebase's 30-day clean-up of anonymous accounts):
+  // copy the rider's saved settings and commute to it. Everything also stays on the phone.
+  const latest = useRef({ lang, prefs, commute });
+  latest.current = { lang, prefs, commute };
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    initFirebase().then(() => {
+      try {
+        unsub = onUser((uid) => {
+          if (!uid || uid === load<string | null>('uid', null)) return;
+          save('uid', uid);
+          const { lang: l, prefs: p, commute: c } = latest.current;
+          syncProfile({ lang: l, ...p });
+          if (c) syncCommute({ ...c });
+        });
+      } catch { /* Firebase not configured */ }
+    });
+    return () => unsub?.();
+  }, []);
 
   const setLang = useCallback((l: Lang) => { setLangState(l); save('lang', l); syncProfile({ lang: l }); }, []);
   const setPrefs = useCallback((p: Partial<Prefs>) => {

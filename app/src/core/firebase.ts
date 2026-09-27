@@ -4,7 +4,7 @@
  */
 import { getApp } from '@react-native-firebase/app';
 import { initializeAppCheck, ReactNativeFirebaseAppCheckProvider } from '@react-native-firebase/app-check';
-import { getAuth, onAuthStateChanged, signInAnonymously } from '@react-native-firebase/auth';
+import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from '@react-native-firebase/auth';
 import { getCrashlytics, recordError, setCrashlyticsCollectionEnabled } from '@react-native-firebase/crashlytics';
 import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from '@react-native-firebase/firestore';
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from '@react-native-firebase/functions';
@@ -39,6 +39,37 @@ export function initFirebase(): Promise<string | null> {
 }
 
 export const currentUid = () => { try { return getAuth().currentUser?.uid ?? null; } catch { return null; } };
+
+/**
+ * Signed-in anonymous rider id. Firebase deletes anonymous accounts older than 30 days
+ * (automatic clean-up), so this signs in again whenever the account is gone.
+ */
+async function ensureUser(): Promise<string | null> {
+  await initFirebase();
+  try {
+    const auth = getAuth();
+    if (!auth.currentUser) await signInAnonymously(auth);
+    return auth.currentUser?.uid ?? null;
+  } catch (e) { reportError(e); return null; }
+}
+
+/** Runs a write as the current rider; if the account was cleaned up, signs in fresh and retries once. */
+async function asUser(write: (uid: string) => Promise<unknown>): Promise<boolean> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const uid = await ensureUser();
+    if (!uid) return false;
+    try { await write(uid); return true; } catch (e) {
+      const code = String((e as { code?: string })?.code ?? '');
+      if (attempt === 0 && (code.includes('unauthenticated') || code.includes('permission-denied') || code.includes('user-not-found') || code.includes('user-token-expired'))) {
+        try { await signOut(getAuth()); } catch { /* ignore */ }
+        continue;
+      }
+      reportError(e);
+      return false;
+    }
+  }
+  return false;
+}
 export const onUser = (cb: (uid: string | null) => void) => onAuthStateChanged(getAuth(), (u) => cb(u?.uid ?? null));
 
 export function reportError(e: unknown) {
@@ -76,34 +107,20 @@ export async function getPublishedTimetable(): Promise<{ version: string; url: s
 }
 
 /* ---------------- rider data ---------------- */
-export async function syncProfile(profile: Record<string, unknown>) {
-  const uid = await initFirebase();
-  if (!uid) return;
-  try { await setDoc(doc(getFirestore(), `users/${uid}`), { ...profile, updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { reportError(e); }
+export function syncProfile(profile: Record<string, unknown>) {
+  return asUser((uid) => setDoc(doc(getFirestore(), `users/${uid}`), { ...profile, updatedAt: serverTimestamp() }, { merge: true }));
 }
 
-export async function syncCommute(commute: Record<string, unknown>) {
-  const uid = await initFirebase();
-  if (!uid) return;
-  try { await setDoc(doc(getFirestore(), `users/${uid}/trips/commute`), { ...commute, updatedAt: serverTimestamp() }, { merge: true }); } catch (e) { reportError(e); }
+export function syncCommute(commute: Record<string, unknown>) {
+  return asUser((uid) => setDoc(doc(getFirestore(), `users/${uid}/trips/commute`), { ...commute, updatedAt: serverTimestamp() }, { merge: true }));
 }
 
 /** One-tap crowd report: 0 got a seat, 1 standing, 2 packed. */
-export async function submitCrowdReport(r: { date: string; service: string; origin: string; start: string; board: string; level: 0 | 1 | 2 }) {
-  const uid = await initFirebase();
-  if (!uid) return false;
-  const id = `${uid}_${r.date}_${r.origin}${r.start.replace(':', '')}${r.board}`;
-  try {
-    await setDoc(doc(getFirestore(), `reports/${id}`), { uid, service: r.service, origin: r.origin, start: r.start, board: r.board, level: r.level, createdAt: serverTimestamp() });
-    return true;
-  } catch (e) { reportError(e); return false; }
+export function submitCrowdReport(r: { date: string; service: string; origin: string; start: string; board: string; level: 0 | 1 | 2 }) {
+  return asUser((uid) => setDoc(doc(getFirestore(), `reports/${uid}_${r.date}_${r.origin}${r.start.replace(':', '')}${r.board}`),
+    { uid, service: r.service, origin: r.origin, start: r.start, board: r.board, level: r.level, createdAt: serverTimestamp() }));
 }
 
-export async function submitInterchange(key: string, coach: 'front' | 'middle' | 'rear' | null, minutes: number) {
-  const uid = await initFirebase();
-  if (!uid) return false;
-  try {
-    await setDoc(doc(getFirestore(), `interchangeReports/${uid}_${Date.now()}`), { uid, key, coach, minutes, createdAt: serverTimestamp() });
-    return true;
-  } catch (e) { reportError(e); return false; }
+export function submitInterchange(key: string, coach: 'front' | 'middle' | 'rear' | null, minutes: number) {
+  return asUser((uid) => setDoc(doc(getFirestore(), `interchangeReports/${uid}_${Date.now()}`), { uid, key, coach, minutes, createdAt: serverTimestamp() }));
 }
