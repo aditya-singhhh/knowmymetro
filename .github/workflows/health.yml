@@ -64,7 +64,11 @@ jobs:
               if b.get('status') == 'ERRORED':
                   import urllib.request, re
                   for u in b.get('logFiles') or []:
-                      try: txt = urllib.request.urlopen(u, timeout=30).read().decode('utf8', 'replace')
+                      try:
+                          raw = urllib.request.urlopen(u, timeout=30).read()
+                          if raw[:2] == b'\x1f\x8b':
+                              import gzip; raw = gzip.decompress(raw)
+                          txt = raw.decode('utf8', 'replace')
                       except Exception as e: print(f"::warning::log fetch failed {e}"); continue
                       lines = []
                       for line in txt.splitlines():
@@ -73,7 +77,7 @@ jobs:
                           lines.append(str(msg))
                       hits = [i for i, l in enumerate(lines) if re.search(r'error|Error|Unable to resolve|Cannot find|failed', l)]
                       shown = set()
-                      for i in hits[:12]:
+                      for i in hits[:15]:
                           for j in range(max(0, i - 1), min(len(lines), i + 4)):
                               if j in shown: continue
                               shown.add(j); print(f"::error title=log {j}::{lines[j][:600]}")
