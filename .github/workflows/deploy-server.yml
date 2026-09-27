@@ -24,4 +24,11 @@ jobs:
       - name: Deploy
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
-        run: npx --yes firebase-tools@14 deploy --only functions,firestore,storage --project knowmymetro --non-interactive --force
+        run: |
+          set -o pipefail
+          npx --yes firebase-tools@14 deploy --only functions,firestore,storage --project knowmymetro --non-interactive --force 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+      - name: Report errors as annotations
+        if: failure()
+        run: |
+          grep -iE "error|denied|permission|not enabled|failed|HTTP" "$RUNNER_TEMP/deploy.log" | tail -20 | while IFS= read -r line; do echo "::error::${line//%/%25}"; done
+          tail -15 "$RUNNER_TEMP/deploy.log" | while IFS= read -r line; do echo "::warning::${line//%/%25}"; done
