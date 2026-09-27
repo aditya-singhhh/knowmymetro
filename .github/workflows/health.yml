@@ -81,9 +81,9 @@ jobs:
                           try: msg = json.loads(line).get('msg', line)
                           except Exception: msg = line
                           lines.append(str(msg))
-                      hits = [i for i, l in enumerate(lines) if re.search(r'error|Error|Unable to resolve|Cannot find|failed', l)]
+                      hits = [i for i, l in enumerate(lines) if re.search(r'^e: |error:|FAILURE|What went wrong|Unresolved reference|Unable to resolve|Cannot find', l)]
                       shown = set()
-                      for i in hits[:15]:
+                      for i in hits[:25]:
                           for j in range(max(0, i - 1), min(len(lines), i + 4)):
                               if j in shown: continue
                               shown.add(j); print(f"::error title=log {j}::{lines[j][:600]}")
