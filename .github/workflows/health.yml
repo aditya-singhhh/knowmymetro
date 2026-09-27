@@ -1,0 +1,54 @@
+name: Health check
+# Calls the live planner with a real trip and lists the latest app builds.
+on:
+  workflow_dispatch:
+
+jobs:
+  planner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Plan JP Nagar -> Hoodi
+        run: |
+          DATE=$(TZ=Asia/Kolkata date -d tomorrow +%Y%m%d)
+          curl -s -X POST https://asia-south1-knowmymetro.cloudfunctions.net/planTrip \
+            -H 'Content-Type: application/json' \
+            -d "{\"data\":{\"from\":\"JPN\",\"to\":\"DKIA\",\"date\":\"$DATE\",\"time\":\"09:30\",\"mode\":\"by\",\"priority\":\"all\"}}" -o plan.json -w "%{http_code}" > code.txt
+          python3 - <<'PY'
+          import json
+          code = open('code.txt').read()
+          try:
+              d = json.load(open('plan.json'))
+          except Exception:
+              print(f"::error title=Planner HTTP {code}::{open('plan.json').read()[:300]}"); raise SystemExit(1)
+          if 'result' not in d:
+              print(f"::error title=Planner HTTP {code}::{json.dumps(d)[:300]}"); raise SystemExit(1)
+          r = d['result']
+          if r.get('error'): print(f"::warning title=Planner said::{r['error']}")
+          for o in r.get('options', [])[:3]:
+              fmt = lambda s: f"{s//3600:02d}:{s%3600//60:02d}"
+              legs = ' | '.join(f"{fmt(l['dep'])} {l['from']}>{l['to']}" for l in o['legs'])
+              print(f"::notice title=Option (stand {o['standMinutes']} min, fare {o['fare']})::{legs} -> {fmt(o['arr'])}")
+          PY
+  builds:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Latest builds
+        run: |
+          eas build:list --limit 3 --json --non-interactive > builds.json 2>/dev/null || true
+          python3 - <<'PY'
+          import json
+          try: builds = json.load(open('builds.json'))
+          except Exception as e: print(f"::warning::could not list builds ({e})"); builds = []
+          for b in builds:
+              url = (b.get('artifacts') or {}).get('buildUrl') or ''
+              err = (b.get('error') or {}).get('message') or ''
+              print(f"::notice title=Build {b.get('status')} ({b.get('buildProfile')})::{url or err or b.get('id')}")
+          PY
