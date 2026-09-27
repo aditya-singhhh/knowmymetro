@@ -10,9 +10,12 @@ jobs:
       - name: Plan JP Nagar -> Hoodi
         run: |
           DATE=$(TZ=Asia/Kolkata date -d tomorrow +%Y%m%d)
-          curl -s -X POST https://asia-south1-knowmymetro.cloudfunctions.net/planTrip \
+          set +e
+          curl -sS -X POST https://asia-south1-knowmymetro.cloudfunctions.net/planTrip \
             -H 'Content-Type: application/json' \
-            -d "{\"data\":{\"from\":\"JPN\",\"to\":\"DKIA\",\"date\":\"$DATE\",\"time\":\"09:30\",\"mode\":\"by\",\"priority\":\"all\"}}" -o plan.json -w "%{http_code}" > code.txt
+            -d "{\"data\":{\"from\":\"JPN\",\"to\":\"DKIA\",\"date\":\"$DATE\",\"time\":\"09:30\",\"mode\":\"by\",\"priority\":\"all\"}}" -o plan.json -w "%{http_code}" > code.txt 2> curl.err
+          echo "::notice title=curl::exit $? http $(cat code.txt) $(head -c 200 curl.err)"
+          touch plan.json
           python3 - <<'PY'
           import json
           code = open('code.txt').read()
@@ -36,13 +39,19 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+        working-directory: .
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
       - name: Latest builds
         run: |
-          eas build:list --limit 3 --json --non-interactive > builds.json 2>/dev/null || true
+          eas init --non-interactive --force > /dev/null 2>&1 || true
+          eas build:list --limit 3 --json --non-interactive > builds.json 2> list.err || true
+          tail -5 list.err | while IFS= read -r l; do echo "::warning::$l"; done
           python3 - <<'PY'
           import json
           try: builds = json.load(open('builds.json'))
