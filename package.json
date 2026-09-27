@@ -1,0 +1,13 @@
+{
+  "name": "knowmymetro",
+  "private": true,
+  "workspaces": ["app", "shared"],
+  "scripts": {
+    "timetable": "node scripts/build-timetable.mjs",
+    "test": "npm --prefix functions test",
+    "typecheck": "tsc -p shared --noEmit && npm --prefix app exec tsc -- --noEmit && npm --prefix functions run typecheck"
+  },
+  "devDependencies": {
+    "fflate": "^0.8.2"
+  }
+}
