@@ -79,7 +79,7 @@ function validate(d: unknown): PlanRequest {
 }
 
 export const planTrip = onCall(
-  { enforceAppCheck: ENFORCE_APP_CHECK, minInstances: PLAN_MIN_INSTANCES, memory: '512MiB', concurrency: 40, cors: false },
+  { enforceAppCheck: ENFORCE_APP_CHECK, minInstances: PLAN_MIN_INSTANCES, memory: '512MiB', concurrency: 40, cors: false, invoker: 'public' },
   async (request): Promise<PlanResponse> => {
     const req = validate(request.data);
     const c = await getCache();
