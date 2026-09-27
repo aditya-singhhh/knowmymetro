@@ -4,23 +4,33 @@
  * While recording, the phone logs:
  *  - GPS fixes every ~2 s (position, accuracy, speed)
  *  - visible mobile towers every ~4 s (Android only)
- *  - motion once a second (average and variation of acceleration: tells moving vs stopped)
+ *  - motion once a second: level push (speeding up / braking), shake and turning (hand use), plus the
+ *    app's guess of the train's state and speed (see motion.ts); the raw per-second numbers are kept too
  *  - air pressure once a second where the phone has a barometer (helps spot underground)
  *  - "doors opened" marks the rider taps at stations (ground truth where GPS is missing)
+ * Safety nets for real-world use (people forget things):
+ *  - saved to the phone every minute, so a killed app loses at most a minute; recovered on next launch
+ *  - stops by itself after 10 min away from the metro line, 45 min without ever reaching it, or 2.5 h
+ *  - finished trips upload by themselves when the app next opens
  * The trip is saved on the phone first, then uploaded. Later, a server job turns many trips into
  * a "tower -> stretch of line" map so positions can be estimated without GPS.
  */
 import { File, Paths, Directory } from 'expo-file-system';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Location from 'expo-location';
-import { Accelerometer, Barometer } from 'expo-sensors';
+import { Accelerometer, Barometer, DeviceMotion } from 'expo-sensors';
 import { Platform } from 'react-native';
+import type { Timetable } from '@kmm/shared';
 import { getCells, type Cell } from '../../modules/cell-info';
+import { uploadRecording } from './firebase';
+import { metresFromLine, MotionTracker, type TrainState } from './motion';
 
 export type Sample =
   | { t: number; k: 'gps'; lat: number; lon: number; acc: number | null; spd: number | null; alt: number | null }
   | { t: number; k: 'cell'; c: Cell[] }
-  | { t: number; k: 'mot'; m: number; sd: number }
+  | { t: number; k: 'mot'; m: number; sd: number }   // older recordings (shake only)
+  | { t: number; k: 'dm'; a: number[]; g: number[]; h: number; v: number; j: number; r: number; s: TrainState; kmh: number | null }
+  | { t: number; k: 'evt'; e: 'train_stopped' | 'train_started' | 'auto_stop'; why?: string }
   | { t: number; k: 'bar'; p: number }
   | { t: number; k: 'mark'; station: string | null };
 
@@ -30,6 +40,7 @@ export interface Recording {
   endedAt: number | null;
   platform: string;
   samples: Sample[];
+  stopReason?: 'user' | 'left_line' | 'never_on_line' | 'too_long' | 'recovered';
 }
 
 export interface LiveStats {
@@ -37,10 +48,28 @@ export interface LiveStats {
   gpsFixes: number;
   lastAccuracy: number | null;
   towers: number;
-  moving: boolean | null;
+  /** what the phone thinks the train is doing */
+  train: TrainState | null;
+  /** km/h: from GPS when it has a fix, otherwise estimated from motion */
+  kmh: number | null;
+  kmhFrom: 'gps' | 'motion' | null;
   marks: number;
+  /** motion-detected station stops */
+  stops: number;
   lastFix: { lat: number; lon: number } | null;
+  /** metres from the nearest metro line at the last GPS fix */
+  fromLine: number | null;
+  /** latest per-second motion numbers, for the on-screen sensor details */
+  motion: { h: number; v: number; j: number; r: number; along: number | null } | null;
+  /** last 60 s: push along the track (or level push when direction is unknown) and state, for the graph */
+  history: { x: number; signed: boolean; s: TrainState }[];
 }
+
+/** Auto-stop rules. */
+const MAX_MS = 150 * 60 * 1000;
+const OFF_LINE_MS = 10 * 60 * 1000;
+const NEVER_ON_LINE_MS = 45 * 60 * 1000;
+const NEAR_LINE_M = 400;
 
 const KEEP_AWAKE_TAG = 'trip-recorder';
 const dir = () => new Directory(Paths.document, 'recordings');
@@ -48,23 +77,32 @@ const dir = () => new Directory(Paths.document, 'recordings');
 let current: Recording | null = null;
 let stops: (() => void)[] = [];
 const towerIds = new Set<string>();
-let stats: LiveStats = { seconds: 0, gpsFixes: 0, lastAccuracy: null, towers: 0, moving: null, marks: 0, lastFix: null };
+const fresh = (): LiveStats => ({ seconds: 0, gpsFixes: 0, lastAccuracy: null, towers: 0, train: null, kmh: null, kmhFrom: null, marks: 0, stops: 0, lastFix: null, fromLine: null, motion: null, history: [] });
+let stats: LiveStats = fresh();
 let listener: ((s: LiveStats) => void) | null = null;
+let stateListener: ((recording: boolean, reason?: Recording['stopReason']) => void) | null = null;
+let lastGpsSpeedAt = 0;
+let onLineAt = 0;       // last time a GPS fix was near the line
+let seenLine = false;
 
 const push = (s: Sample) => { current?.samples.push(s); };
 const emit = () => listener?.({ ...stats });
 
 export const isRecording = () => current !== null;
 export const onStats = (fn: ((s: LiveStats) => void) | null) => { listener = fn; if (fn) emit(); };
+/** Told when recording stops (by the rider or automatically). */
+export const onRecordingState = (fn: typeof stateListener) => { stateListener = fn; };
 
-export async function startRecording(): Promise<{ ok: true } | { ok: false; reason: 'location' }> {
+export async function startRecording(tt: Timetable): Promise<{ ok: true } | { ok: false; reason: 'location' }> {
   if (current) return { ok: true };
   const perm = await Location.requestForegroundPermissionsAsync();
   if (perm.status !== 'granted') return { ok: false, reason: 'location' };
 
   current = { id: `${Date.now()}`, startedAt: Date.now(), endedAt: null, platform: `${Platform.OS} ${Platform.Version}`, samples: [] };
   towerIds.clear();
-  stats = { seconds: 0, gpsFixes: 0, lastAccuracy: null, towers: 0, moving: null, marks: 0, lastFix: null };
+  stats = fresh();
+  seenLine = false; onLineAt = 0; lastGpsSpeedAt = 0;
+  const lines = Object.values(tt.lines);
   await activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => undefined);
 
   // GPS
@@ -73,6 +111,13 @@ export async function startRecording(): Promise<{ ok: true } | { ok: false; reas
     (p) => {
       push({ t: p.timestamp, k: 'gps', lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy ?? null, spd: p.coords.speed ?? null, alt: p.coords.altitude ?? null });
       stats.gpsFixes++; stats.lastAccuracy = p.coords.accuracy ?? null; stats.lastFix = { lat: p.coords.latitude, lon: p.coords.longitude };
+      if (p.coords.speed != null && p.coords.speed >= 0 && (p.coords.accuracy ?? 999) < 50) {
+        stats.kmh = Math.round(p.coords.speed * 3.6); stats.kmhFrom = 'gps'; lastGpsSpeedAt = Date.now();
+      }
+      if ((p.coords.accuracy ?? 999) < 150) {
+        stats.fromLine = Math.round(metresFromLine(lines, tt.stations, p.coords.latitude, p.coords.longitude));
+        if (stats.fromLine < NEAR_LINE_M) { seenLine = true; onLineAt = Date.now(); }
+      }
       emit();
     },
   );
@@ -90,21 +135,59 @@ export async function startRecording(): Promise<{ ok: true } | { ok: false; reas
   const cellTimer = setInterval(pollCells, 4000);
   stops.push(() => clearInterval(cellTimer));
 
-  // Motion: sample at 10 Hz, keep one summary per second
+  // Motion: 10 readings a second, summarised once a second (see motion.ts)
+  const tracker = new MotionTracker();
+  let last: TrainState | null = null;
+  const useDeviceMotion = await DeviceMotion.isAvailableAsync().catch(() => false);
+  if (useDeviceMotion) {
+    DeviceMotion.setUpdateInterval(100);
+    const dm = DeviceMotion.addListener((m) => {
+      const inc = m.accelerationIncludingGravity, lin = m.acceleration;
+      if (!inc || !lin) return;
+      const rr = m.rotationRate;
+      tracker.push({
+        t: Date.now(), ax: lin.x, ay: lin.y, az: lin.z, gx: inc.x - lin.x, gy: inc.y - lin.y, gz: inc.z - lin.z,
+        rot: rr ? Math.sqrt(rr.alpha * rr.alpha + rr.beta * rr.beta + rr.gamma * rr.gamma) : 0,
+      });
+    });
+    stops.push(() => dm.remove());
+  }
+  // Older phones without a combined motion sensor: keep the simple shake measure
   let buf: number[] = [];
-  Accelerometer.setUpdateInterval(100);
-  const acc = Accelerometer.addListener(({ x, y, z }) => { buf.push(Math.sqrt(x * x + y * y + z * z)); });
+  if (!useDeviceMotion) {
+    Accelerometer.setUpdateInterval(100);
+    const acc = Accelerometer.addListener(({ x, y, z }) => { buf.push(Math.sqrt(x * x + y * y + z * z)); });
+    stops.push(() => acc.remove());
+  }
   const motTimer = setInterval(() => {
-    if (!buf.length) return;
-    const m = buf.reduce((a, b) => a + b, 0) / buf.length;
-    const sd = Math.sqrt(buf.reduce((a, b) => a + (b - m) * (b - m), 0) / buf.length);
-    buf = [];
-    push({ t: Date.now(), k: 'mot', m: round(m, 4), sd: round(sd, 4) });
-    stats.moving = sd > 0.02;
-    stats.seconds = Math.round((Date.now() - (current?.startedAt ?? Date.now())) / 1000);
+    const now = Date.now();
+    if (useDeviceMotion) {
+      const sec = tracker.second(now);
+      if (sec) {
+        push({ t: now, k: 'dm', a: sec.a, g: sec.g, h: sec.h, v: sec.v, j: sec.j, r: sec.r, s: sec.state, kmh: sec.kmh });
+        if (sec.state === 'stopped' && last && last !== 'stopped' && last !== 'unknown') { push({ t: now, k: 'evt', e: 'train_stopped' }); stats.stops++; }
+        if (sec.state === 'starting' && last === 'stopped') push({ t: now, k: 'evt', e: 'train_started' });
+        last = sec.state;
+        stats.train = sec.state;
+        stats.motion = { h: sec.h, v: sec.v, j: sec.j, r: sec.r, along: sec.along };
+        stats.history = [...stats.history.slice(-59), { x: sec.along ?? sec.h, signed: sec.along != null, s: sec.state }];
+        if (now - lastGpsSpeedAt > 10000) { stats.kmh = sec.kmh; stats.kmhFrom = sec.kmh == null ? null : 'motion'; }
+      }
+    } else if (buf.length) {
+      const m = buf.reduce((a, b) => a + b, 0) / buf.length;
+      const sd = Math.sqrt(buf.reduce((a, b) => a + (b - m) * (b - m), 0) / buf.length);
+      buf = [];
+      push({ t: now, k: 'mot', m: round(m, 4), sd: round(sd, 4) });
+    }
+    stats.seconds = Math.round((now - (current?.startedAt ?? now)) / 1000);
     emit();
+    checkAutoStop(now);
   }, 1000);
-  stops.push(() => { acc.remove(); clearInterval(motTimer); });
+  stops.push(() => clearInterval(motTimer));
+
+  // Save to the phone every minute (a killed app loses at most a minute)
+  const saveTimer = setInterval(() => { if (current) savePending(current); }, 60000);
+  stops.push(() => clearInterval(saveTimer));
 
   // Air pressure, if available
   if (await Barometer.isAvailableAsync().catch(() => false)) {
@@ -128,15 +211,30 @@ export function markStation(station: string | null) {
   emit();
 }
 
+function checkAutoStop(now: number) {
+  if (!current) return;
+  const age = now - current.startedAt;
+  let why: Recording['stopReason'] | null = null;
+  if (age > MAX_MS) why = 'too_long';
+  // Only judge "away from the line" on a recent, good GPS fix (underground there are no fixes at all).
+  else if (seenLine && stats.fromLine != null && stats.fromLine > NEAR_LINE_M && now - onLineAt > OFF_LINE_MS) why = 'left_line';
+  else if (!seenLine && age > NEVER_ON_LINE_MS) why = 'never_on_line';
+  if (!why) return;
+  push({ t: now, k: 'evt', e: 'auto_stop', why });
+  const rec = stopRecording(why);
+  if (rec) uploadPendingRecordings();
+}
+
 /** Stops recording and saves the trip on the phone. Returns it for upload. */
-export function stopRecording(): Recording | null {
+export function stopRecording(reason: Recording['stopReason'] = 'user'): Recording | null {
   if (!current) return null;
   stops.forEach((s) => { try { s(); } catch { /* ignore */ } });
   stops = [];
   deactivateKeepAwake(KEEP_AWAKE_TAG);
-  const rec = { ...current, endedAt: Date.now() };
+  const rec = { ...current, endedAt: Date.now(), stopReason: reason };
   current = null;
   savePending(rec);
+  stateListener?.(false, reason);
   return rec;
 }
 
@@ -149,13 +247,29 @@ function savePending(rec: Recording) {
   } catch { /* storage full: upload straight away still works */ }
 }
 
+/** Finished trips waiting to upload. A trip left unfinished by a killed app is closed at its last reading. */
 export function pendingRecordings(): Recording[] {
   try {
     const d = dir();
     if (!d.exists) return [];
     return d.list().filter((f): f is File => f instanceof File && f.name.endsWith('.json'))
-      .map((f) => JSON.parse(f.textSync()) as Recording);
+      .map((f) => JSON.parse(f.textSync()) as Recording)
+      .filter((r) => r.id !== current?.id)
+      .map((r) => r.endedAt ? r : { ...r, endedAt: r.samples.at(-1)?.t ?? r.startedAt, stopReason: 'recovered' as const });
   } catch { return []; }
+}
+
+let uploading: Promise<{ done: number; failed: number }> | null = null;
+/** Uploads every finished trip; ones that fail stay on the phone for next time. */
+export function uploadPendingRecordings(): Promise<{ done: number; failed: number }> {
+  uploading ??= (async () => {
+    let done = 0, failed = 0;
+    for (const rec of pendingRecordings()) {
+      if (await uploadRecording(rec)) { forgetRecording(rec.id); done++; } else failed++;
+    }
+    return { done, failed };
+  })().finally(() => { uploading = null; });
+  return uploading;
 }
 
 export function forgetRecording(id: string) {

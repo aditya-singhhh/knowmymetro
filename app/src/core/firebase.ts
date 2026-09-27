@@ -129,7 +129,7 @@ export function submitInterchange(key: string, coach: 'front' | 'middle' | 'rear
  * Trip recorder upload: one summary document plus size-limited chunks
  * (recordings/{uid_id} and recordings/{uid_id}/chunks/{n}). Create-only for the owner.
  */
-export function uploadRecording(rec: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[] }) {
+export function uploadRecording(rec: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[]; stopReason?: string }) {
   return asUser(async (uid) => {
     const db = getFirestore();
     const recId = `${uid}_${rec.id}`;
@@ -144,13 +144,15 @@ export function uploadRecording(rec: { id: string; startedAt: number; endedAt: n
     if (cur.length) chunks.push(cur);
     const kinds: Record<string, number> = {};
     for (const s of rec.samples as { k: string }[]) kinds[s.k] = (kinds[s.k] ?? 0) + 1;
-    await setDoc(doc(db, `recordings/${recId}`), {
-      uid, startedAt: rec.startedAt, endedAt: rec.endedAt, platform: rec.platform, samples: rec.samples.length, chunks: chunks.length, kinds, createdAt: serverTimestamp(),
-    });
+    // chunks first, summary last: a summary means the upload is complete
     for (let i = 0; i < chunks.length; i += 5) {
       const batch = writeBatch(db);
       for (let n = i; n < Math.min(chunks.length, i + 5); n++) batch.set(doc(db, `recordings/${recId}/chunks/${n}`), { uid, n, samples: chunks[n] });
       await batch.commit();
     }
+    await setDoc(doc(db, `recordings/${recId}`), {
+      uid, startedAt: rec.startedAt, endedAt: rec.endedAt, platform: rec.platform, samples: rec.samples.length, chunks: chunks.length, kinds,
+      stopReason: rec.stopReason ?? 'user', createdAt: serverTimestamp(),
+    });
   });
 }

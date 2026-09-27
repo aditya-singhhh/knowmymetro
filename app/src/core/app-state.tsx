@@ -6,6 +6,7 @@ import {
 } from '@kmm/shared';
 import { initFirebase, onUser, syncCommute, syncProfile } from './firebase';
 import { load, save } from './storage';
+import { uploadPendingRecordings } from './recorder';
 import { checkForNewTimetable, loadTimetable } from './timetable';
 
 export interface Commute { from: string; to: string; time: string; mode: TimeMode; priority: Priority }
@@ -45,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let alive = true;
     const refresh = async () => {
       await initFirebase();
+      uploadPendingRecordings().catch(() => undefined); // trip recordings left on the phone
       const next = await checkForNewTimetable(tt).catch(() => null);
       if (alive && next) { setTT(next); setTimetableUpdated(true); }
     };

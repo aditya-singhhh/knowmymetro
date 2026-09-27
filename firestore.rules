@@ -36,13 +36,14 @@ service cloud.firestore {
 
     // trip recorder (founding riders): create-only, owner's id in the document id and fields
     match /recordings/{id} {
-      allow create: if signedIn()
+      // create, or overwrite your own (a retry after an upload broke halfway)
+      allow create, update: if signedIn()
         && id.matches(request.auth.uid + '_[0-9]+')
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasOnly(['uid', 'startedAt', 'endedAt', 'platform', 'samples', 'chunks', 'kinds', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'startedAt', 'endedAt', 'platform', 'samples', 'chunks', 'kinds', 'stopReason', 'createdAt'])
         && request.resource.data.createdAt == request.time;
       match /chunks/{n} {
-        allow create: if signedIn()
+        allow create, update: if signedIn()
           && id.matches(request.auth.uid + '_[0-9]+')
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.keys().hasOnly(['uid', 'n', 'samples']);
