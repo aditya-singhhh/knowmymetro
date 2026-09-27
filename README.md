@@ -29,7 +29,7 @@ You need: Node 22, a Firebase project on the Blaze plan, an [Expo account](https
    - Authentication → Sign-in method: enable **Anonymous**.
    - App Check: register the Android app with **Play Integrity** and the iOS app with **App Attest**.
    - Add an Android app with package `in.knowmymetro.app` and an iOS app with bundle ID `in.knowmymetro.app`.
-     Download `google-services.json` and `GoogleService-Info.plist` into `app/`.
+     Download `google-services.json` into `app/` (done). `GoogleService-Info.plist` is only needed once you build for iPhone.
    - Billing → set a budget alert (for example ₹1,000/month).
 2. **Install**
    ```bash
@@ -41,7 +41,7 @@ You need: Node 22, a Firebase project on the Blaze plan, an [Expo account](https
    npx firebase-tools login
    npx firebase-tools deploy --only firestore:rules,storage,functions
    ```
-   To save cost while testing, deploy with `PLAN_MIN_INSTANCES=0` in `functions/.env`.
+   The planner keeps no instance running by default (free when idle, ~1–2 s cold start). After launch, set `PLAN_MIN_INSTANCES=1` in `functions/.env` for instant plans.
 4. **Build the app** (EAS, in `app/`)
    ```bash
    npx eas-cli@latest login

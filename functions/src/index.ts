@@ -24,8 +24,8 @@ initializeApp();
 setGlobalOptions({ region: 'asia-south1', maxInstances: 20 });
 const db = getFirestore();
 
-/** Keep one routing instance warm in production (set PLAN_MIN_INSTANCES=0 to save cost while testing). */
-const PLAN_MIN_INSTANCES = defineInt('PLAN_MIN_INSTANCES', { default: 1 });
+/** Instances kept warm. 0 = free when idle (a cold start adds ~1-2 s); set to 1 after launch for instant plans (~₹500-1,000/month). */
+const PLAN_MIN_INSTANCES = defineInt('PLAN_MIN_INSTANCES', { default: 0 });
 /** App Check is on by default; switch off only for local emulator runs. */
 const ENFORCE_APP_CHECK = defineBoolean('ENFORCE_APP_CHECK', { default: true });
 

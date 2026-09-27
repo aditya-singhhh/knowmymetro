@@ -19,7 +19,6 @@
     "ios": {
       "bundleIdentifier": "in.knowmymetro.app",
       "supportsTablet": false,
-      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "KnowMyMetro uses your location only to find the metro station nearest to you.",
         "ITSAppUsesNonExemptEncryption": false
