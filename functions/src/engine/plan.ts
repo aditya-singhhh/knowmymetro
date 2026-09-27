@@ -105,7 +105,7 @@ export function plan(input: EngineInput): PlanResponse {
   };
   const makeLeg = (ev: ReturnType<typeof boardings>[number], j: number): RideLeg => {
     const p = tt.patterns[ev.pattern], s = p.stops;
-    return { line: p.line, from: s[ev.ia], to: s[j], dep: ev.dep, arr: ev.t0 + p.arr[j], origin: s[0], terminus: s[s.length - 1],
+    return { line: p.line, from: s[ev.ia], to: s[j], dep: ev.dep, arr: ev.t0 + p.arr[j], origin: s[0], start: ev.t0, terminus: s[s.length - 1],
       before: ev.ia, stops: j - ev.ia, frac: ev.ia / (s.length - 1), work, dir: ev.dir, platform: p.pf[ev.ia] ?? null, t0: ev.t0, pattern: ev.pattern };
   };
   const changeNeed = (prev: RideLeg, next: { line: LineId; dir: number }): ChangeReq => {

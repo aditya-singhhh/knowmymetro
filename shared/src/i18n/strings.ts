@@ -4,6 +4,17 @@ export type Lang = (typeof LANGS)[number][0];
 export const LOCALE: Record<Lang, string> = {"en":"en-IN","kn":"kn-IN","hi":"hi-IN","ta":"ta-IN","te":"te-IN"};
 
 export const en = {
+ "share_plan": "Share this plan",
+ "check_updates": "Check for updates",
+ "up_to_date": "You have the latest version",
+ "update_ready": "Update downloaded. Restarting…",
+ "report_q": "How was the {t} train?",
+ "report_seat": "Got a seat",
+ "report_stand": "Standing",
+ "report_packed": "Packed",
+ "report_thanks": "Thanks! Your report helps everyone on this train.",
+ "skip": "Skip for now",
+ "privacy_note": "Your trips and reports are stored anonymously. We never collect your name, number or location history.",
  "loc_rough": "Your location is too rough to pick a station. Choose it from the list.",
  "change_st": "Change",
  "setup_title": "Set up your daily trip",
@@ -166,6 +177,17 @@ export const en = {
 export type StringKey = keyof typeof en;
 
 export const kn: Partial<Record<StringKey, string>> = {
+ "share_plan": "ಈ ಯೋಜನೆ ಹಂಚಿಕೊಳ್ಳಿ",
+ "check_updates": "ಅಪ್‌ಡೇಟ್ ಪರಿಶೀಲಿಸಿ",
+ "up_to_date": "ನಿಮ್ಮಲ್ಲಿ ಹೊಸ ಆವೃತ್ತಿ ಇದೆ",
+ "update_ready": "ಅಪ್‌ಡೇಟ್ ಬಂದಿದೆ. ಮರುಪ್ರಾರಂಭ…",
+ "report_q": "{t} ರೈಲು ಹೇಗಿತ್ತು?",
+ "report_seat": "ಸೀಟ್ ಸಿಕ್ಕಿತು",
+ "report_stand": "ನಿಂತುಕೊಂಡೆ",
+ "report_packed": "ತುಂಬಾ ರಶ್",
+ "report_thanks": "ಧನ್ಯವಾದ! ನಿಮ್ಮ ಮಾಹಿತಿ ಈ ರೈಲಿನ ಎಲ್ಲರಿಗೂ ಸಹಾಯ.",
+ "skip": "ಈಗ ಬೇಡ",
+ "privacy_note": "ನಿಮ್ಮ ಪ್ರಯಾಣ ಮತ್ತು ವರದಿಗಳು ಅನಾಮಧೇಯವಾಗಿ ಉಳಿಯುತ್ತವೆ. ನಿಮ್ಮ ಹೆಸರು, ನಂಬರ್ ಅಥವಾ ಸ್ಥಳ ಇತಿಹಾಸ ಸಂಗ್ರಹಿಸುವುದಿಲ್ಲ.",
  "loc_rough": "ನಿಮ್ಮ ಸ್ಥಳ ಸರಿಯಾಗಿ ಸಿಗುತ್ತಿಲ್ಲ. ಪಟ್ಟಿಯಿಂದ ನಿಲ್ದಾಣ ಆರಿಸಿ.",
  "change_st": "ಬದಲಿಸಿ",
  "setup_title": "ನಿಮ್ಮ ದಿನದ ಪ್ರಯಾಣ ಹೊಂದಿಸಿ",
@@ -327,6 +349,17 @@ export const kn: Partial<Record<StringKey, string>> = {
 };
 
 export const hi: Partial<Record<StringKey, string>> = {
+ "share_plan": "यह योजना शेयर करें",
+ "check_updates": "अपडेट देखें",
+ "up_to_date": "आपके पास नया संस्करण है",
+ "update_ready": "अपडेट डाउनलोड हुआ। दोबारा शुरू हो रहा है…",
+ "report_q": "{t} वाली ट्रेन कैसी थी?",
+ "report_seat": "सीट मिली",
+ "report_stand": "खड़े रहे",
+ "report_packed": "बहुत भीड़",
+ "report_thanks": "धन्यवाद! आपकी जानकारी इस ट्रेन के सबके काम आएगी।",
+ "skip": "अभी नहीं",
+ "privacy_note": "आपकी यात्राएँ और रिपोर्ट गुमनाम रहती हैं। हम आपका नाम, नंबर या लोकेशन इतिहास नहीं रखते।",
  "loc_rough": "आपकी लोकेशन सटीक नहीं है। सूची से स्टेशन चुनें।",
  "change_st": "बदलें",
  "setup_title": "अपना रोज़ का सफ़र सेट करें",
@@ -488,6 +521,17 @@ export const hi: Partial<Record<StringKey, string>> = {
 };
 
 export const ta: Partial<Record<StringKey, string>> = {
+ "share_plan": "இந்தத் திட்டத்தைப் பகிர்",
+ "check_updates": "புதுப்பிப்பைச் சரிபார்",
+ "up_to_date": "உங்களிடம் புதிய பதிப்பு உள்ளது",
+ "update_ready": "புதுப்பிப்பு பதிவிறக்கப்பட்டது. மீண்டும் தொடங்குகிறது…",
+ "report_q": "{t} ரயில் எப்படி இருந்தது?",
+ "report_seat": "இருக்கை கிடைத்தது",
+ "report_stand": "நின்றேன்",
+ "report_packed": "மிகக் கூட்டம்",
+ "report_thanks": "நன்றி! உங்கள் தகவல் இந்த ரயிலில் உள்ள அனைவருக்கும் உதவும்.",
+ "skip": "இப்போது வேண்டாம்",
+ "privacy_note": "உங்கள் பயணங்களும் அறிக்கைகளும் அநாமதேயமாக சேமிக்கப்படும். உங்கள் பெயர், எண் அல்லது இருப்பிட வரலாற்றை நாங்கள் சேகரிப்பதில்லை.",
  "loc_rough": "உங்கள் இருப்பிடம் துல்லியமாக இல்லை. பட்டியலிலிருந்து நிலையத்தைத் தேர்ந்தெடுக்கவும்.",
  "change_st": "மாற்று",
  "setup_title": "உங்கள் தினசரி பயணத்தை அமைக்கவும்",
@@ -649,6 +693,17 @@ export const ta: Partial<Record<StringKey, string>> = {
 };
 
 export const te: Partial<Record<StringKey, string>> = {
+ "share_plan": "ఈ ప్లాన్ షేర్ చేయండి",
+ "check_updates": "అప్‌డేట్ చూడండి",
+ "up_to_date": "మీ దగ్గర తాజా వెర్షన్ ఉంది",
+ "update_ready": "అప్‌డేట్ డౌన్‌లోడ్ అయింది. మళ్ళీ ప్రారంభమవుతోంది…",
+ "report_q": "{t} రైలు ఎలా ఉంది?",
+ "report_seat": "సీటు దొరికింది",
+ "report_stand": "నిలబడ్డాను",
+ "report_packed": "చాలా రద్దీ",
+ "report_thanks": "ధన్యవాదాలు! మీ సమాచారం ఈ రైలులోని అందరికీ ఉపయోగపడుతుంది.",
+ "skip": "ఇప్పుడు వద్దు",
+ "privacy_note": "మీ ప్రయాణాలు, రిపోర్టులు అనామకంగా ఉంటాయి. మీ పేరు, నంబర్ లేదా లొకేషన్ చరిత్ర మేము సేకరించం.",
  "loc_rough": "మీ లొకేషన్ సరిగ్గా లేదు. జాబితా నుండి స్టేషన్ ఎంచుకోండి.",
  "change_st": "మార్చు",
  "setup_title": "మీ రోజువారీ ప్రయాణం సెట్ చేయండి",

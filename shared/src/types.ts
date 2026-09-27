@@ -48,6 +48,7 @@ export interface Leg {
   dep: number;        // seconds after midnight
   arr: number;
   origin: string;     // where this train starts
+  start: number;      // when this train leaves its first station (seconds after midnight)
   terminus: string;   // where this train ends
   before: number;     // stops the train has made before you board
   stops: number;      // stops you ride

@@ -8,6 +8,6 @@
   "scripts": {
     "timetable": "npm --prefix functions run timetable --",
     "test": "npm --prefix functions test",
-    "typecheck": "tsc -p shared --noEmit && npm --prefix app exec tsc -- --noEmit && npm --prefix functions run typecheck"
+    "typecheck": "tsc -p shared --noEmit && npm --prefix app run typecheck && npm --prefix functions run typecheck"
   }
 }
