@@ -13,3 +13,4 @@ app/android/
 .env.local
 !functions/.env
 service-account*.json
+app/dist-web
