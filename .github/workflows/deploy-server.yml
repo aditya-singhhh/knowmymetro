@@ -26,6 +26,8 @@ jobs:
       - run: npm test
       - name: Write service account key
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/sa.json"
+      - name: Show deploying account (email only)
+        run: python3 -c "import json,os;print('::notice title=Deploying as::'+json.load(open(os.environ['RUNNER_TEMP']+'/sa.json')).get('client_email','?'))"
       - name: Deploy
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
