@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Reading nearby mobile towers requires the location permission on Android 10+ (no GPS is used). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+</manifest>

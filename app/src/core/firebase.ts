@@ -6,7 +6,7 @@ import { getApp } from '@react-native-firebase/app';
 import { initializeAppCheck, ReactNativeFirebaseAppCheckProvider } from '@react-native-firebase/app-check';
 import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from '@react-native-firebase/auth';
 import { getCrashlytics, recordError, setCrashlyticsCollectionEnabled } from '@react-native-firebase/crashlytics';
-import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from '@react-native-firebase/firestore';
+import { doc, getDoc, getFirestore, serverTimestamp, setDoc, writeBatch } from '@react-native-firebase/firestore';
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import type { PlanRequest, PlanResponse } from '@kmm/shared';
 
@@ -123,4 +123,34 @@ export function submitCrowdReport(r: { date: string; service: string; origin: st
 
 export function submitInterchange(key: string, coach: 'front' | 'middle' | 'rear' | null, minutes: number) {
   return asUser((uid) => setDoc(doc(getFirestore(), `interchangeReports/${uid}_${Date.now()}`), { uid, key, coach, minutes, createdAt: serverTimestamp() }));
+}
+
+/**
+ * Trip recorder upload: one summary document plus size-limited chunks
+ * (recordings/{uid_id} and recordings/{uid_id}/chunks/{n}). Create-only for the owner.
+ */
+export function uploadRecording(rec: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[] }) {
+  return asUser(async (uid) => {
+    const db = getFirestore();
+    const recId = `${uid}_${rec.id}`;
+    // Firestore documents are limited to 1 MB: split by size (~350 KB per chunk)
+    const chunks: unknown[][] = [];
+    let cur: unknown[] = [], size = 0;
+    for (const s of rec.samples) {
+      const n = JSON.stringify(s).length;
+      if (size + n > 350_000 && cur.length) { chunks.push(cur); cur = []; size = 0; }
+      cur.push(s); size += n;
+    }
+    if (cur.length) chunks.push(cur);
+    const kinds: Record<string, number> = {};
+    for (const s of rec.samples as { k: string }[]) kinds[s.k] = (kinds[s.k] ?? 0) + 1;
+    await setDoc(doc(db, `recordings/${recId}`), {
+      uid, startedAt: rec.startedAt, endedAt: rec.endedAt, platform: rec.platform, samples: rec.samples.length, chunks: chunks.length, kinds, createdAt: serverTimestamp(),
+    });
+    for (let i = 0; i < chunks.length; i += 5) {
+      const batch = writeBatch(db);
+      for (let n = i; n < Math.min(chunks.length, i + 5); n++) batch.set(doc(db, `recordings/${recId}/chunks/${n}`), { uid, n, samples: chunks[n] });
+      await batch.commit();
+    }
+  });
 }

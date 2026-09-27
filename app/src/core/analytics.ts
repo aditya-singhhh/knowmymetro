@@ -17,7 +17,9 @@ export type AppEvent =
   | 'change_report'      // key, coach, minutes
   | 'timetable_updated'  // version
   | 'onboarding_done'    // lang, has_commute
-  | 'language_changed';  // lang
+  | 'language_changed'   // lang
+  | 'recording_started'
+  | 'recording_uploaded'; // samples, minutes
 
 export function track(event: AppEvent, params: Params = {}) {
   try {

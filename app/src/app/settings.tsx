@@ -1,5 +1,5 @@
 import * as Application from 'expo-application';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
@@ -48,6 +48,16 @@ export default function Settings() {
           <Card style={s.switchRow}>
             <View style={{ flex: 1 }}><T v="body">{t('women_coach')}</T><T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('women_sub')}</T></View>
             <Switch value={prefs.women} onValueChange={(v) => setPrefs({ women: v })} trackColor={{ true: c.ok }} />
+          </Card>
+        </View>
+
+        <View style={{ gap: space.s }}>
+          <T v="caption" color={c.ink2} style={s.label}>Beta</T>
+          <Card padded={false}>
+            <Tap onPress={() => { router.back(); router.push('/recorder'); }} style={s.row}>
+              <View style={{ flex: 1 }}><T v="body">Trip recorder</T><T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>Record GPS, towers and motion on your ride to improve live tracking</T></View>
+              <T v="headline" color={c.ink3}>›</T>
+            </Tap>
           </Card>
         </View>
 

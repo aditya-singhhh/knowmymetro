@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["CellInfoModule"] },
+  "android": { "modules": ["expo.modules.cellinfo.CellInfoModule"] }
+}

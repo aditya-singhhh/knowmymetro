@@ -34,6 +34,21 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
     }
 
+    // trip recorder (founding riders): create-only, owner's id in the document id and fields
+    match /recordings/{id} {
+      allow create: if signedIn()
+        && id.matches(request.auth.uid + '_[0-9]+')
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'startedAt', 'endedAt', 'platform', 'samples', 'chunks', 'kinds', 'createdAt'])
+        && request.resource.data.createdAt == request.time;
+      match /chunks/{n} {
+        allow create: if signedIn()
+          && id.matches(request.auth.uid + '_[0-9]+')
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'n', 'samples']);
+      }
+    }
+
     // public, read-only for the app
     match /timetable/{doc} { allow read: if true; }
     match /disruptions/{doc} { allow read: if signedIn(); }
