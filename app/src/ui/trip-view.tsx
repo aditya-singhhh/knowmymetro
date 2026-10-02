@@ -24,13 +24,18 @@ export function TripView({ option }: { option: PlanOption }) {
           <View key={i}>
             <Step time={fmt(l.dep)} color={col} solidBelow icon>
               <T v="headline">{nm(l.from)}</T>
-              <T v="sub" color={c.ink2}>{t('board', { line: lineName(l.line), s: nm(l.terminus) })}{l.platform ? ` · ${t('platform', { p: l.platform })}` : ''}</T>
+              {/* the two things people look for on the platform: which side, which direction */}
+              <View style={s.dirRow}>
+                {l.platform ? <View style={[s.pf, { backgroundColor: col }]}><T v="headline" color={l.line === 'YELLOW' ? '#2A2200' : '#FFFFFF'}>{t('platform', { p: l.platform })}</T></View> : null}
+                <T v="title" style={{ flexShrink: 1 }}>{t('towards_big', { s: nm(l.terminus) })}</T>
+              </View>
+              <T v="sub" color={c.ink2}>{lineName(l.line)}</T>
               <SeatBadge seat={l.seat} />
               <T v="sub" color={c.ink2}>{t(l.stops === 1 ? 'stops_ride1' : 'stops_ride', { n: l.stops, m: mins(l.arr - l.dep) })}</T>
               {ch?.kind === 'line' && ch.coaches.length ? (
                 <View style={[s.coachBox, { backgroundColor: c.fill }]}>
                   <CoachStrip coaches={ch.coaches} line={l.line} large />
-                  <T v="sub"><T v="sub" style={{ fontWeight: '700' }}>{t('board_coach', { c: coachWords(ch.coaches, t('or'), t) })}</T>{ch.known ? '' : ` (${t('likely')})`}{', '}{t(ch.tight ? 'tight_change' : 'quick_change', { s: nm(l.to) }).toLowerCase()}</T>
+                  <T v="sub"><T v="sub" style={{ fontWeight: '700' }}>{t('board_coach', { c: coachWords(ch.coaches, t('or'), t) })}</T>{ch.known ? '' : ` (${t('likely')})`}{', '}{lowerFirst(t(ch.tight ? 'tight_change' : 'quick_change', { s: nm(l.to) }))}</T>
                 </View>
               ) : null}
             </Step>
@@ -42,7 +47,8 @@ export function TripView({ option }: { option: PlanOption }) {
                     ? `${t('change_to', { line: lineName(next.line) })}. ${t('walk_wait', { w: mins(ch.walk), p: Math.max(0, mins(ch.available) - mins(ch.walk)) })}`
                     : `${t(ch.kind === 'wait' ? 'trick_wait' : 'trick_rev', { s: nm(l.to) })} ${t('wait_n', { n: mins(ch.available) })}.`}
                 </T>
-                {ch.tight ? <View style={[s.tag, { backgroundColor: c.badBg }]}><T v="caption" color={c.bad}>{t('tight_change', { s: nm(l.to) })}</T></View> : null}
+                {ch.held ? <View style={[s.tag, { backgroundColor: c.okBg }]}><T v="caption" color={c.ok}>{t('held_wait')}</T></View>
+                  : ch.tight ? <View style={[s.tag, { backgroundColor: c.badBg }]}><T v="caption" color={c.bad}>{t('tight_change', { s: nm(l.to) })}</T></View> : null}
                 {ch.kind !== 'line' ? <View style={[s.tag, { backgroundColor: c.tintBg }]}><T v="caption" color={c.tint}>{t('trick')}</T></View> : null}
               </Step>
             ) : null}
@@ -56,6 +62,8 @@ export function TripView({ option }: { option: PlanOption }) {
     </Card>
   );
 }
+
+const lowerFirst = (x: string) => x.charAt(0).toLowerCase() + x.slice(1);
 
 export function coachWords(coaches: number[], or: string, t: ReturnType<typeof useApp>['t']) {
   const n = coaches.length === 1 ? String(coaches[0]) : `${coaches.slice(0, -1).join(', ')} ${or} ${coaches[coaches.length - 1]}`;
@@ -106,5 +114,7 @@ const s = StyleSheet.create({
   rail: { flex: 1, minHeight: 16, borderRadius: 3, marginVertical: 2 },
   body: { flex: 1, gap: 6, paddingTop: 11, paddingBottom: space.l, marginLeft: space.s },
   coachBox: { borderRadius: 12, padding: space.m, gap: space.s },
+  dirRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space.s },
+  pf: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   tag: { alignSelf: 'flex-start', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 7 },
 });

@@ -129,7 +129,7 @@ export function submitInterchange(key: string, coach: 'front' | 'middle' | 'rear
  * Trip recorder upload: one summary document plus size-limited chunks
  * (recordings/{uid_id} and recordings/{uid_id}/chunks/{n}). Create-only for the owner.
  */
-export function uploadRecording(rec: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[]; stopReason?: string }) {
+export function uploadRecording(rec: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[]; stopReason?: string; trip?: unknown }) {
   return asUser(async (uid) => {
     const db = getFirestore();
     const recId = `${uid}_${rec.id}`;
@@ -152,7 +152,36 @@ export function uploadRecording(rec: { id: string; startedAt: number; endedAt: n
     }
     await setDoc(doc(db, `recordings/${recId}`), {
       uid, startedAt: rec.startedAt, endedAt: rec.endedAt, platform: rec.platform, samples: rec.samples.length, chunks: chunks.length, kinds,
-      stopReason: rec.stopReason ?? 'user', createdAt: serverTimestamp(),
+      stopReason: rec.stopReason ?? 'user', ...(rec.trip ? { trip: rec.trip } : {}), createdAt: serverTimestamp(),
     });
   });
+}
+
+/* ---------------- live delays shared between riders ---------------- */
+/**
+ * trainLive/{YYYYMMDD_origin_start} = { line, delay (s), at (s after midnight), uid, updatedAt }
+ * Written by riders following that train live; read by anyone planning a trip on it.
+ */
+export const trainKey = (date: string, origin: string, start: number) => `${date}_${origin}_${start}`;
+
+export function shareTrainDelay(d: { date: string; origin: string; start: number; line: string; delay: number; at: number }) {
+  return asUser((uid) => setDoc(doc(getFirestore(), `trainLive/${trainKey(d.date, d.origin, d.start)}`), {
+    line: d.line, delay: Math.round(d.delay), at: Math.round(d.at), uid, updatedAt: serverTimestamp(),
+  }));
+}
+
+const liveCache = new Map<string, { at: number; v: { delay: number; at: number } | null }>();
+/** Latest rider-measured delay for a train, if someone reported it in the last 10 minutes. */
+export async function getTrainDelay(date: string, origin: string, start: number): Promise<{ delay: number; at: number } | null> {
+  const k = trainKey(date, origin, start);
+  const hit = liveCache.get(k);
+  if (hit && Date.now() - hit.at < 45000) return hit.v;
+  try {
+    const snap = await getDoc(doc(getFirestore(), `trainLive/${k}`));
+    const data = snap.data() as { delay?: number; at?: number; updatedAt?: { toMillis(): number } } | undefined;
+    const fresh = data?.updatedAt && Date.now() - data.updatedAt.toMillis() < 10 * 60 * 1000;
+    const v = fresh && typeof data?.delay === 'number' ? { delay: data.delay, at: data.at ?? 0 } : null;
+    liveCache.set(k, { at: Date.now(), v });
+    return v;
+  } catch { return null; }
 }

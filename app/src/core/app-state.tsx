@@ -10,7 +10,8 @@ import { uploadPendingRecordings } from './recorder';
 import { checkForNewTimetable, loadTimetable } from './timetable';
 
 export interface Commute { from: string; to: string; time: string; mode: TimeMode; priority: Priority }
-export interface Prefs { women: boolean; pace: Pace }
+/** remind: minutes before the commute train to send a reminder (0 = off) */
+export interface Prefs { women: boolean; pace: Pace; remind?: number }
 
 interface AppCtx {
   tt: Timetable;

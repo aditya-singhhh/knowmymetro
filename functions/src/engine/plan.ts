@@ -302,7 +302,8 @@ function coachAdvice(available: number, c: ChangeReq, pace: number, women: boole
   }[info.coach];
   const known = !info.estimate;
   if (available >= far) return { walk: best, tight: false, coaches: sets.half, known };
-  if (available >= mid) return { walk: mid, tight: false, coaches: sets.half, known };
+  // walking time assumes the rider takes the coaches we recommend
+  if (available >= mid) return { walk: best, tight: false, coaches: sets.half, known };
   return { walk: best, tight: true, coaches: sets.one, known };
 }
 

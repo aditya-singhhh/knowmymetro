@@ -6,6 +6,7 @@ import { fmt, mins, pad2, secondsNow, stationName, ymd, type Pace, type PlanOpti
 import { track } from '@/core/analytics';
 import { useApp, useNow } from '@/core/app-state';
 import { commuteDayOffset, dayFromToday } from '@/core/days';
+import { getTrainDelay } from '@/core/firebase';
 import { stationHere } from '@/core/here';
 import { usePlan } from '@/core/planner';
 import { load, save } from '@/core/storage';
@@ -231,6 +232,14 @@ function OptionCard({ option, best, last, nowSec, onPress }: { option: PlanOptio
     : seated.length ? { seat: 2 as const, text: t('sum_some', { x: seated.map((l) => t(l.line === 'GREEN' ? 'G' : l.line === 'PURPLE' ? 'P' : 'Y')).join(', ') }) }
       : option.legs.some((l) => l.seat === 0) ? { seat: 0 as const, text: t('sum_none') } : { seat: 1 as const, text: t('maybe_seats') };
   const ch = option.changes[0];
+  // a rider on this train shared how late it is (today only)
+  const [late, setLate] = useState<number | null>(null);
+  const first = option.legs[0];
+  useEffect(() => {
+    if (nowSec == null) return;
+    getTrainDelay(ymd(new Date()), first.origin, first.start - (first.held ?? 0)).then((d) => setLate(d ? Math.round(d.delay / 60) : null)).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [first.origin, first.start, nowSec == null]);
   return (
     <Tap onPress={onPress}>
       <Card style={{ gap: space.m }}>
@@ -243,6 +252,7 @@ function OptionCard({ option, best, last, nowSec, onPress }: { option: PlanOptio
           <T v="sub" color={option.dep - nowSec < 0 ? c.bad : c.tint} style={{ fontWeight: '600', marginTop: -space.s }}>
             {option.dep - nowSec < 0 ? t('gone', { n: Math.round((nowSec - option.dep) / 60) }) : option.dep - nowSec < 60 ? t('leaves_now') : t('leaves_in', { n: Math.floor((option.dep - nowSec) / 60) })}
             {best ? ` · ${mins(option.arr - option.dep)} ${t('min')}` : ''}
+            {late != null ? ` · ${late >= 1 ? t('rider_late', { n: late }) : t('rider_ontime')}` : ''}
           </T>
         ) : null}
         <TrainChain legs={option.legs} arr={option.arr} />

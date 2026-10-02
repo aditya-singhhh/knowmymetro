@@ -40,7 +40,7 @@ service cloud.firestore {
       allow create, update: if signedIn()
         && id.matches(request.auth.uid + '_[0-9]+')
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasOnly(['uid', 'startedAt', 'endedAt', 'platform', 'samples', 'chunks', 'kinds', 'stopReason', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'startedAt', 'endedAt', 'platform', 'samples', 'chunks', 'kinds', 'stopReason', 'trip', 'createdAt'])
         && request.resource.data.createdAt == request.time;
       match /chunks/{n} {
         allow create, update: if signedIn()
@@ -51,6 +51,17 @@ service cloud.firestore {
     }
 
     // public, read-only for the app
+    // live delays riders measure on a train (see app/src/core/live.ts); anyone signed in may read
+    match /trainLive/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && id.matches('[0-9]{8}_[A-Z]+_[0-9]+')
+        && request.resource.data.keys().hasOnly(['line', 'delay', 'at', 'uid', 'updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.delay is int && request.resource.data.delay > -1800 && request.resource.data.delay < 3600
+        && request.resource.data.at is int
+        && request.resource.data.updatedAt == request.time;
+    }
     match /timetable/{doc} { allow read: if true; }
     match /disruptions/{doc} { allow read: if signedIn(); }
 

@@ -5,7 +5,9 @@ import { departuresAt, fmt, secondsNow, serviceFor, stationName, type PlanOption
 import { useApp, useNow } from '@/core/app-state';
 import { commuteDayOffset, dayFromToday } from '@/core/days';
 import { useStationHere } from '@/core/here';
+import { scheduleCommuteReminders } from '@/core/notify';
 import { buildRequest, prefetchCommute, usePlan } from '@/core/planner';
+import { useLive } from '@/ui/live-card';
 import { putTrip } from '@/core/trip-store';
 import { Button, Card, Chevron, CoachStrip, Notice, SeatBadge, SectionHeader, Screen, Skeleton, T, Tap, TrainChain } from '@/ui/components';
 import { space, type, useTheme } from '@/ui/theme';
@@ -22,7 +24,12 @@ export default function Home() {
   const offset = commute ? commuteDayOffset(commute.time, now) : 0;
   const req = useMemo(() => (commute ? buildRequest(commute, dayFromToday(offset), prefs) : null), [commute, offset, prefs]);
   const plan = usePlan(req);
-  useEffect(() => { if (commute) prefetchCommute(commute, prefs); }, [commute, prefs]);
+  // fetch the commute ahead (offline use) and set the "time to leave" reminders from those plans
+  useEffect(() => {
+    if (!commute) { scheduleCommuteReminders(tt, 0, []); return; }
+    prefetchCommute(commute, prefs).then((plans) => scheduleCommuteReminders(tt, prefs.remind ?? 0, plans)).catch(() => undefined);
+  }, [commute, prefs, tt]);
+  const live = useLive();
   // refresh "where am I" every few minutes while the app is open (useNow ticks every 30 s)
   const { code: here, allowed, ask } = useStationHere(tt, Math.floor(now.getTime() / 180000));
   const nextAt = here ?? homeStation;
@@ -35,6 +42,18 @@ export default function Home() {
         headerRight: () => <Tap onPress={() => router.push('/settings')} hitSlop={12} accessibilityLabel={t('settings')}><T v="headline" color={c.tint}>{t('settings')}</T></Tap>,
       }} />
       <Screen>
+        {live ? (
+          <Tap onPress={() => router.push({ pathname: '/(tabs)/(home)/trip', params: { id: live.id } })} style={[s.liveBar, { backgroundColor: c.card }]} accessibilityRole="button">
+            <View style={[s.liveDot, { backgroundColor: c.ok }]} />
+            <T v="sub" style={{ fontWeight: '600', flex: 1 }} numberOfLines={1}>
+              {live.status.phase === 'arrived' ? t('arrived') : live.status.next ? t('next_stn', { s: stationName(tt, live.status.next, lang) }) : t('arrive_est', { t: fmt(live.status.arrival) })}
+            </T>
+            <T v="caption" color={live.status.delay >= 120 ? c.meh : c.ok} style={{ fontWeight: '700' }}>
+              {Math.round(live.status.delay / 60) >= 1 ? t('late_n', { n: Math.round(live.status.delay / 60) }) : t('on_time')}
+            </T>
+            <Chevron />
+          </Tap>
+        ) : null}
         <Tap onPress={() => router.navigate({ pathname: '/(tabs)/(plan)', params: { pick: 'to', at: String(Date.now()), ...(here ? { from: here } : {}) } })} style={[s.search, { backgroundColor: c.card }]} accessibilityRole="search">
           <T v="body" color={c.ink3}>⌕</T>
           <View style={{ flex: 1 }}>
@@ -171,6 +190,8 @@ function NextTrains({ code, now }: { code: string; now: Date }) {
 }
 
 const s = StyleSheet.create({
+  liveBar: { flexDirection: 'row', alignItems: 'center', gap: space.s, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 },
+  liveDot: { width: 8, height: 8, borderRadius: 4 },
   search: { minHeight: 50, paddingVertical: 8, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   badges: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },

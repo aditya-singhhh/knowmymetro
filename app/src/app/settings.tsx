@@ -6,6 +6,7 @@ import { StyleSheet, Switch, View } from 'react-native';
 import { LANGS, type Lang, type Pace } from '@kmm/shared';
 import { setRiderProperty, track } from '@/core/analytics';
 import { useApp } from '@/core/app-state';
+import { allowNotifications } from '@/core/notify';
 import { Card, Screen, Segmented, T, Tap } from '@/ui/components';
 import { space, useTheme } from '@/ui/theme';
 
@@ -49,6 +50,13 @@ export default function Settings() {
             <View style={{ flex: 1 }}><T v="body">{t('women_coach')}</T><T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('women_sub')}</T></View>
             <Switch value={prefs.women} onValueChange={(v) => setPrefs({ women: v })} trackColor={{ true: c.ok }} />
           </Card>
+        </View>
+
+        <View style={{ gap: space.s }}>
+          <T v="caption" color={c.ink2} style={s.label}>{t('remind')}</T>
+          <Segmented<'0' | '5' | '10' | '15'> value={String(prefs.remind ?? 0) as '0'}
+            onChange={async (v) => { const m = Number(v); if (m > 0 && !(await allowNotifications())) return; setPrefs({ remind: m }); track('reminder_set', { minutes: m }); }}
+            options={[{ value: '0', label: t('off') }, { value: '5', label: `5 ${t('min')}` }, { value: '10', label: `10 ${t('min')}` }, { value: '15', label: `15 ${t('min')}` }]} />
         </View>
 
         <View style={{ gap: space.s }}>

@@ -19,7 +19,10 @@ export type AppEvent =
   | 'onboarding_done'    // lang, has_commute
   | 'language_changed'   // lang
   | 'recording_started'
-  | 'recording_uploaded'; // samples, minutes
+  | 'recording_uploaded' // samples, minutes
+  | 'live_started'       // rides
+  | 'live_ended'         // reason, delay, source
+  | 'reminder_set';      // minutes
 
 export function track(event: AppEvent, params: Params = {}) {
   try {

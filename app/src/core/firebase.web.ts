@@ -28,4 +28,7 @@ export const syncProfile = (_p: Record<string, unknown>) => Promise.resolve(fals
 export const syncCommute = (_c: Record<string, unknown>) => Promise.resolve(false);
 export const submitCrowdReport = (_r: { date: string; service: string; origin: string; start: string; board: string; level: 0 | 1 | 2 }) => Promise.resolve(false);
 export const submitInterchange = (_k: string, _c: 'front' | 'middle' | 'rear' | null, _m: number) => Promise.resolve(false);
-export const uploadRecording = (_r: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[]; stopReason?: string }) => Promise.resolve(false);
+export const uploadRecording = (_r: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[]; stopReason?: string; trip?: unknown }) => Promise.resolve(false);
+export const trainKey = (date: string, origin: string, start: number) => `${date}_${origin}_${start}`;
+export const shareTrainDelay = (_d: { date: string; origin: string; start: number; line: string; delay: number; at: number }) => Promise.resolve(false);
+export const getTrainDelay = async (_d: string, _o: string, _s: number): Promise<{ delay: number; at: number } | null> => null;

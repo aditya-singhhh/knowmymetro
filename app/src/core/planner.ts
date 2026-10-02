@@ -71,8 +71,9 @@ export function usePlan(req: PlanRequest | null): PlanState {
 }
 
 /** Fetch the commute for the next few working days in the background, for offline use. */
-export function prefetchCommute(c: Commute, prefs: Prefs, days = 5) {
+export async function prefetchCommute(c: Commute, prefs: Prefs, days = 5): Promise<{ date: Date; res: PlanResponse }[]> {
   const start = new Date(); start.setHours(0, 0, 0, 0);
+  const jobs: Promise<{ date: Date; res: PlanResponse } | null>[] = [];
   let fetched = 0;
   for (let i = 0; i < 8 && fetched < days; i++) {
     const d = new Date(start); d.setDate(d.getDate() + i);
@@ -80,6 +81,9 @@ export function prefetchCommute(c: Commute, prefs: Prefs, days = 5) {
     fetched++;
     const req = buildRequest(c, d, prefs);
     const hit = cache()[keyOf(req)];
-    if (!hit || Date.now() - hit.at > 12 * 3600 * 1000) fetchPlan(req).catch(() => undefined);
+    jobs.push(!hit || Date.now() - hit.at > 12 * 3600 * 1000
+      ? fetchPlan(req).then((res) => ({ date: d, res })).catch(() => (hit ? { date: d, res: hit.res } : null))
+      : Promise.resolve({ date: d, res: hit.res }));
   }
+  return (await Promise.all(jobs)).filter((x): x is { date: Date; res: PlanResponse } => !!x);
 }

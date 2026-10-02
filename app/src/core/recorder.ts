@@ -40,7 +40,9 @@ export interface Recording {
   endedAt: number | null;
   platform: string;
   samples: Sample[];
-  stopReason?: 'user' | 'left_line' | 'never_on_line' | 'too_long' | 'recovered';
+  stopReason?: 'user' | 'left_line' | 'never_on_line' | 'too_long' | 'recovered' | 'arrived';
+  /** set when recorded as part of a live trip: the planned rides */
+  trip?: { date: string; legs: { line: string; from: string; to: string; origin: string; start: number }[] };
 }
 
 export interface LiveStats {
@@ -85,7 +87,10 @@ let lastGpsSpeedAt = 0;
 let onLineAt = 0;       // last time a GPS fix was near the line
 let seenLine = false;
 
-const push = (s: Sample) => { current?.samples.push(s); };
+const sampleListeners = new Set<(s: Sample) => void>();
+const push = (s: Sample) => { if (!current) return; current.samples.push(s); sampleListeners.forEach((fn) => { try { fn(s); } catch { /* ignore */ } }); };
+/** Every reading as it's recorded (used by the live trip). Returns an unsubscribe function. */
+export const onSample = (fn: (s: Sample) => void) => { sampleListeners.add(fn); return () => { sampleListeners.delete(fn); }; };
 const emit = () => listener?.({ ...stats });
 
 export const isRecording = () => current !== null;
@@ -93,12 +98,12 @@ export const onStats = (fn: ((s: LiveStats) => void) | null) => { listener = fn;
 /** Told when recording stops (by the rider or automatically). */
 export const onRecordingState = (fn: typeof stateListener) => { stateListener = fn; };
 
-export async function startRecording(tt: Timetable): Promise<{ ok: true } | { ok: false; reason: 'location' }> {
-  if (current) return { ok: true };
+export async function startRecording(tt: Timetable, trip?: Recording['trip']): Promise<{ ok: true } | { ok: false; reason: 'location' }> {
+  if (current) { if (trip) current.trip = trip; return { ok: true }; }
   const perm = await Location.requestForegroundPermissionsAsync();
   if (perm.status !== 'granted') return { ok: false, reason: 'location' };
 
-  current = { id: `${Date.now()}`, startedAt: Date.now(), endedAt: null, platform: `${Platform.OS} ${Platform.Version}`, samples: [] };
+  current = { id: `${Date.now()}`, startedAt: Date.now(), endedAt: null, platform: `${Platform.OS} ${Platform.Version}`, samples: [], ...(trip ? { trip } : {}) };
   towerIds.clear();
   stats = fresh();
   seenLine = false; onLineAt = 0; lastGpsSpeedAt = 0;

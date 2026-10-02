@@ -1,13 +1,15 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { fmt, secondsNow, serviceFor, stationName, ymd } from '@kmm/shared';
 import { track } from '@/core/analytics';
 import { useApp, useNow } from '@/core/app-state';
 import { dayFromToday } from '@/core/days';
-import { submitCrowdReport } from '@/core/firebase';
+import { getTrainDelay, submitCrowdReport } from '@/core/firebase';
+import { startLive } from '@/core/live';
 import { getTrip } from '@/core/trip-store';
-import { Card, Notice, Screen, T, Tap } from './components';
+import { Button, Card, Notice, Screen, T, Tap } from './components';
+import { DelayPill, LiveCard, useLive } from './live-card';
 import { space, type, useTheme } from './theme';
 import { ShareButton, TripView } from './trip-view';
 
@@ -16,7 +18,16 @@ export function TripScreen() {
   const trip = getTrip(id);
   const { t, tt, lang, locale } = useApp();
   const { c } = useTheme();
-  const now = useNow();
+  const now = useNow(15000);
+  const live = useLive();
+  const [liveMsg, setLiveMsg] = useState<string | null>(null);
+  const [rider, setRider] = useState<{ delay: number } | null>(null);
+  // someone already on this train shared how late it is
+  useEffect(() => {
+    if (!trip || trip.day !== 0) return;
+    const l = trip.option.legs[0];
+    getTrainDelay(ymd(dayFromToday(0)), l.origin, l.start - (l.held ?? 0)).then(setRider).catch(() => undefined);
+  }, [trip]);
   useEffect(() => {
     if (trip) track('plan_open', { seat_all: trip.option.seatAllTheWay, trick: !!trip.option.trick, rides: trip.option.legs.length });
   }, [trip]);
@@ -25,7 +36,16 @@ export function TripScreen() {
   const { option, day } = trip;
   const first = option.legs[0], last = option.legs[option.legs.length - 1];
   const left = option.dep - secondsNow(now);
-  const ridden = day === 0 && secondsNow(now) > first.dep + 60;
+  const nowS = secondsNow(now);
+  const ridden = day === 0 && nowS > first.dep + 60;
+  const isLive = live?.id === id;
+  const canLive = day === 0 && !isLive && nowS > option.dep - 20 * 60 && nowS < option.arr;
+  const missed = day === 0 && !isLive && nowS > option.dep + 60 && nowS < option.arr;
+  const goLive = async () => {
+    setLiveMsg(null);
+    const r = await startLive(tt, id, option, dayFromToday(0));
+    if (r === 'location') setLiveMsg(t('loc_needed'));
+  };
   const when = day > 0
     ? dayFromToday(day).toLocaleDateString(locale, { weekday: 'long' })
     : left > 0 ? t('in_x', { x: `${Math.round(left / 60)} ${t('min')}` }) : t('leave_now');
@@ -34,20 +54,36 @@ export function TripScreen() {
     <>
       <Stack.Screen options={{ title: `${stationName(tt, first.from, lang)} – ${stationName(tt, last.to, lang)}`, headerLargeTitle: false }} />
       <Screen>
-        <Card style={s.summary}>
-          <View>
-            <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('board_at', { s: stationName(tt, first.from, lang) })}</T>
-            <T v="clock" style={{ fontSize: 44 }}>{fmt(option.dep)}</T>
-            <T v="sub" color={c.tint} style={{ fontWeight: '700' }}>{when}</T>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('reach')}</T>
-            <T v="title" style={[type.time, { fontSize: 24 }]}>{fmt(option.arr)}</T>
-          </View>
-        </Card>
+        {isLive && live ? <LiveCard live={live} /> : (
+          <Card style={{ gap: space.m }}>
+            <View style={s.summary}>
+              <View>
+                <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('board_at', { s: stationName(tt, first.from, lang) })}</T>
+                <T v="clock" style={{ fontSize: 44 }}>{fmt(option.dep)}</T>
+                <T v="sub" color={c.tint} style={{ fontWeight: '700' }}>{when}</T>
+              </View>
+              <View style={{ alignItems: 'flex-end', gap: space.s }}>
+                {rider ? <DelayPill delay={rider.delay} rider /> : null}
+                <View style={{ alignItems: 'flex-end' }}>
+                  <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('reach')}</T>
+                  <T v="title" style={[type.time, { fontSize: 24 }]}>{fmt(option.arr)}</T>
+                </View>
+              </View>
+            </View>
+            {canLive ? (
+              <View style={{ gap: space.s }}>
+                <Button label={t('live_on')} onPress={goLive} />
+                <T v="caption" color={c.ink2} style={{ fontWeight: '400', textAlign: 'center' }}>{liveMsg ?? t('live_hint')}</T>
+              </View>
+            ) : null}
+            {missed ? (
+              <Button kind="plain" label={t('missed')} onPress={() => router.navigate({ pathname: '/(tabs)/(plan)', params: { from: first.from, to: last.to, at: String(Date.now()) } })} />
+            ) : null}
+          </Card>
+        )}
         <TripView option={option} />
-        <ShareButton option={option} />
-        {ridden ? <CrowdReport origin={first.origin} board={first.from} start={first.start} dep={first.dep} /> : null}
+        {!isLive ? <ShareButton option={option} /> : null}
+        {ridden && !isLive ? <CrowdReport origin={first.origin} board={first.from} start={first.start} dep={first.dep} /> : null}
       </Screen>
     </>
   );
