@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { departuresAt, fmt, secondsNow, serviceFor, stationName, type PlanOption } from '@kmm/shared';
 import { useApp, useNow } from '@/core/app-state';
 import { commuteDayOffset, dayFromToday } from '@/core/days';
+import { useStationHere } from '@/core/here';
 import { buildRequest, prefetchCommute, usePlan } from '@/core/planner';
 import { putTrip } from '@/core/trip-store';
 import { Button, Card, Chevron, CoachStrip, Notice, SeatBadge, SectionHeader, Screen, Skeleton, T, Tap, TrainChain } from '@/ui/components';
@@ -22,6 +23,10 @@ export default function Home() {
   const req = useMemo(() => (commute ? buildRequest(commute, dayFromToday(offset), prefs) : null), [commute, offset, prefs]);
   const plan = usePlan(req);
   useEffect(() => { if (commute) prefetchCommute(commute, prefs); }, [commute, prefs]);
+  // refresh "where am I" every few minutes while the app is open (useNow ticks every 30 s)
+  const { code: here, allowed, ask } = useStationHere(tt, Math.floor(now.getTime() / 180000));
+  const nextAt = here ?? homeStation;
+  const awayFromCommute = !!here && here !== commute?.from;
 
   return (
     <>
@@ -30,14 +35,24 @@ export default function Home() {
         headerRight: () => <Tap onPress={() => router.push('/settings')} hitSlop={12} accessibilityLabel={t('settings')}><T v="headline" color={c.tint}>{t('settings')}</T></Tap>,
       }} />
       <Screen>
-        <Tap onPress={() => router.navigate({ pathname: '/(tabs)/(plan)', params: { pick: 'to' } })} style={[s.search, { backgroundColor: c.card }]} accessibilityRole="search">
+        <Tap onPress={() => router.navigate({ pathname: '/(tabs)/(plan)', params: { pick: 'to', at: String(Date.now()), ...(here ? { from: here } : {}) } })} style={[s.search, { backgroundColor: c.card }]} accessibilityRole="search">
           <T v="body" color={c.ink3}>⌕</T>
-          <T v="body" color={c.ink2} style={{ fontSize: 17 }}>{t('where')}</T>
+          <View style={{ flex: 1 }}>
+            <T v="body" color={c.ink2} style={{ fontSize: 17 }}>{t('where')}</T>
+            {here ? <T v="caption" color={c.tint} style={{ fontWeight: '500' }}>{t('from')} {stationName(tt, here, lang)} · {t('near_you')}</T> : null}
+          </View>
         </Tap>
+        {allowed === false ? (
+          <Tap onPress={ask} style={{ paddingHorizontal: space.xs, marginTop: -space.s }}>
+            <T v="sub" color={c.tint} style={{ fontWeight: '600' }}>◎ {t('use_loc')}</T>
+          </Tap>
+        ) : null}
+
+        {awayFromCommute && nextAt ? <NextTrains code={nextAt} now={now} /> : null}
 
         {commute ? (
           <View style={{ gap: space.m }}>
-            <SectionHeader title={offset === 0 ? t('c_today') : offset === 1 ? t('c_tom') : t('c_day', { d: dayFromToday(offset).toLocaleDateString(app.locale, { weekday: 'long' }) })} action={t('edit')} onAction={() => router.navigate('/(tabs)/(plan)')} />
+            <SectionHeader title={offset === 0 ? t('c_today') : offset === 1 ? t('c_tom') : t('c_day', { d: dayFromToday(offset).toLocaleDateString(app.locale, { weekday: 'long' }) })} action={t('edit')} onAction={() => router.navigate({ pathname: '/(tabs)/(plan)', params: { edit: 'commute', at: String(Date.now()) } })} />
             {plan.data || plan.loading ? <CommuteCard option={plan.data && plan.data.best >= 0 ? plan.data.options[plan.data.best] : null} loading={plan.loading && !plan.data} offset={offset} now={now} /> : null}
             {plan.error && plan.data ? <Notice text={t('offline')} /> : null}
             {plan.error && !plan.data ? <Card><T v="sub" color={c.ink2}>{t('err_net')}</T><View style={{ height: space.m }} /><Button label={t('retry')} kind="plain" onPress={plan.retry} /></Card> : null}
@@ -51,7 +66,7 @@ export default function Home() {
           </Card>
         )}
 
-        {homeStation ? <NextTrains code={homeStation} now={now} /> : null}
+        {!awayFromCommute && nextAt ? <NextTrains code={nextAt} now={now} /> : null}
 
         <T v="caption" color={c.ink3} style={{ textAlign: 'center', fontWeight: '400', lineHeight: 17 }}>{t('fine')}</T>
       </Screen>
@@ -156,7 +171,7 @@ function NextTrains({ code, now }: { code: string; now: Date }) {
 }
 
 const s = StyleSheet.create({
-  search: { height: 50, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
+  search: { minHeight: 50, paddingVertical: 8, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   badges: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   coachLine: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingTop: space.m, borderTopWidth: StyleSheet.hairlineWidth },

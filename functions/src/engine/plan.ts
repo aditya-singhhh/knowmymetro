@@ -33,7 +33,7 @@ export const DEFAULT_TUNING: Tuning = {
 };
 
 /** Measured or reported change times: key `${station}|${fromLine}${dir}>${toLine}` */
-export interface InterchangeInfo { coach: 'front' | 'middle' | 'rear' | null; best: number /* minutes from best coach */ }
+export interface InterchangeInfo { coach: 'front' | 'middle' | 'rear' | null; best: number /* minutes from best coach */; estimate?: boolean }
 export const DEFAULT_INTERCHANGES: Record<string, InterchangeInfo> = {
   // rider report: front coach, about 3 min (Green from the south towards Majestic, change to Purple)
   'KGWA|GREEN1>PURPLE': { coach: 'front', best: 3 },
@@ -111,7 +111,7 @@ export function plan(input: EngineInput): PlanResponse {
   const changeNeed = (prev: RideLeg, next: { line: LineId; dir: number }): ChangeReq => {
     if (prev.line !== next.line) {
       const key = interchangeKey(prev.to, prev.line, prev.dir, next.line);
-      const info = inter[key];
+      const info = inter[key] ?? mirrored(inter, key);
       return { kind: 'line', key, info, need: Math.round((info ? info.best : GENERIC_CHANGE_MIN) * 60 * pace) };
     }
     return prev.dir === next.dir ? { kind: 'wait', need: Math.round(60 * pace) } : { kind: 'reverse', need: Math.round(180 * pace) };
@@ -124,7 +124,8 @@ export function plan(input: EngineInput): PlanResponse {
   const simplest = simplestRides(tt, req.from, req.to);
   const maxRides = Math.min(4, simplest + 2);
   const useful = (s: string, L: LineId) => s === req.to || INTERCHANGES.has(s) || origins[L]?.has(s);
-  const beats = (a: Label, b: Label) => a.time <= b.time && a.stand <= b.stand + 0.01 && a.rides <= b.rides && (!byMode || (a.dep ?? 0) >= (b.dep ?? 0));
+  // A later first train is never "worse": arrive-by riders want to leave late, leave-now riders want a choice of departures.
+  const beats = (a: Label, b: Label) => a.time <= b.time && a.stand <= b.stand + 0.01 && a.rides <= b.rides && (a.dep ?? 0) >= (b.dep ?? 0);
   const pareto = new Map<string, Label[]>();
   const finals: Label[] = [];
   let frontier: Label[] = [{ stn: req.from, time: winStart, stand: 0, rides: 0, dep: null, legs: [], seen: new Set([req.from]) }];
@@ -189,6 +190,8 @@ export function plan(input: EngineInput): PlanResponse {
     const first = all.slice().sort((a, b) => a.arr - b.arr)[0];
     return empty('none-in-time', first ? { earliestArrival: first.arr } : {});
   }
+  // drop "leave earlier only to wait longer": same or later arrival, no less standing, from an earlier first train
+  feasible = feasible.filter((o) => !feasible.some((b) => b !== o && b.dep > o.dep && b.arr <= o.arr && b.standMinutes <= o.standMinutes + 0.01 && b.rides <= o.rides));
   const minDur = Math.min(...feasible.map((o) => o.arr - o.dep)), minArr = Math.min(...feasible.map((o) => o.arr));
   feasible = feasible.filter((o) => o.arr - o.dep <= minDur * 1.35 + 600 && (byMode || o.arr <= minArr + 1800));
 
@@ -237,7 +240,20 @@ function simplestRides(tt: Timetable, a: string, b: string): number {
   return 3;
 }
 
-/** Which coach to be in for a line change, given the time available. */
+/**
+ * No report yet for this direction: use the opposite direction of the same change. The stairs don't move,
+ * so a train arriving from the other side has them at its other end (front <-> rear). Marked as an estimate.
+ */
+function mirrored(inter: Record<string, InterchangeInfo>, key: string): InterchangeInfo | undefined {
+  const m = /^(.+\|[A-Z]+)(-?1)>(.+)$/.exec(key);
+  if (!m) return undefined;
+  const other = inter[`${m[1]}${m[2] === '1' ? '-1' : '1'}>${m[3]}`];
+  if (!other?.coach) return undefined;
+  const flip = { front: 'rear', rear: 'front', middle: 'middle' } as const;
+  return { coach: flip[other.coach], best: other.best, estimate: true };
+}
+
+/** Which coach to be in for a line change, given the time available. Always names the quickest coaches. */
 function coachAdvice(available: number, c: ChangeReq, pace: number, women: boolean) {
   const info = c.info;
   if (!info || !info.coach) return { walk: c.need, tight: available - c.need < 90, coaches: [] as number[], known: false };
@@ -247,9 +263,10 @@ function coachAdvice(available: number, c: ChangeReq, pace: number, women: boole
     middle: { one: [3, 4], half: [2, 3, 4, 5] },
     rear: { one: [6], half: [4, 5, 6] },
   }[info.coach];
-  if (available >= far) return { walk: best, tight: false, coaches: [], known: true };
-  if (available >= mid) return { walk: mid, tight: false, coaches: sets.half, known: true };
-  return { walk: best, tight: true, coaches: sets.one, known: true };
+  const known = !info.estimate;
+  if (available >= far) return { walk: best, tight: false, coaches: sets.half, known };
+  if (available >= mid) return { walk: mid, tight: false, coaches: sets.half, known };
+  return { walk: best, tight: true, coaches: sets.one, known };
 }
 
 export { cardFare };

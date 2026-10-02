@@ -30,7 +30,7 @@ export function TripView({ option }: { option: PlanOption }) {
               {ch?.kind === 'line' && ch.coaches.length ? (
                 <View style={[s.coachBox, { backgroundColor: c.fill }]}>
                   <CoachStrip coaches={ch.coaches} line={l.line} large />
-                  <T v="sub"><T v="sub" style={{ fontWeight: '700' }}>{t('board_coach', { c: coachWords(ch.coaches, t('or'), t) })}</T>{', '}{t(ch.tight ? 'tight_change' : 'quick_change', { s: nm(l.to) }).toLowerCase()}</T>
+                  <T v="sub"><T v="sub" style={{ fontWeight: '700' }}>{t('board_coach', { c: coachWords(ch.coaches, t('or'), t) })}</T>{ch.known ? '' : ` (${t('likely')})`}{', '}{t(ch.tight ? 'tight_change' : 'quick_change', { s: nm(l.to) }).toLowerCase()}</T>
                 </View>
               ) : null}
             </Step>

@@ -77,3 +77,27 @@ test('plans are fast enough for an interactive app', () => {
   for (let i = 0; i < 20; i++) run({ from: 'WHTM', to: 'APTS', mode: 'after', time: '18:00' });
   assert.ok((performance.now() - t0) / 20 < 250);
 });
+
+test('leave now lists the next few departures, not just one (Yeshwantpur to KR Puram at 11:00)', () => {
+  const r = run({ from: 'YPM', to: 'KRAM', mode: 'after', time: '11:00', priority: 'fast' });
+  const firstTrains = new Set(r.options.map((o) => o.legs[0].dep));
+  assert.ok(firstTrains.size >= 3, `only ${firstTrains.size} departures: ${r.options.map(route).join(' / ')}`);
+  assert.equal(route(r.options[r.best]).split(' | ')[0].slice(0, 5), '11:04');
+  // never "leave earlier only to wait longer"
+  for (const o of r.options) assert.ok(!r.options.some((b) => b.dep > o.dep && b.arr <= o.arr && b.standMinutes <= o.standMinutes), route(o));
+});
+
+test('coach advice at Majestic from the Yeshwantpur side (mirrored estimate: rear)', () => {
+  const r = run({ from: 'YPM', to: 'KRAM', mode: 'after', time: '11:00', priority: 'fast' });
+  const ch = r.options[r.best].changes[0];
+  assert.equal(ch.at, 'KGWA');
+  assert.ok(ch.coaches.length > 0, 'no coach advice');
+  assert.ok(ch.coaches.every((n) => n >= 4), `expected rear coaches, got ${ch.coaches}`);
+  assert.equal(ch.known, false);
+});
+
+test('coach advice from JP Nagar stays front and known', () => {
+  const ch = run({}).options[0].changes[0];
+  assert.ok(ch.coaches.length > 0 && ch.coaches.every((n) => n <= 3), String(ch.coaches));
+  assert.equal(ch.known, true);
+});

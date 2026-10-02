@@ -4,6 +4,14 @@ export type Lang = (typeof LANGS)[number][0];
 export const LOCALE: Record<Lang, string> = {"en":"en-IN","kn":"kn-IN","hi":"hi-IN","ta":"ta-IN","te":"te-IN"};
 
 export const en = {
+ "likely": "likely",
+ "lv_now": "Now",
+ "lv_at": "Leave at",
+ "leaves_in": "Leaves in {n} min",
+ "leaves_now": "Leaving now",
+ "gone": "Left {n} min ago",
+ "recent": "Recent",
+ "near_you": "Near you",
  "share_plan": "Share this plan",
  "check_updates": "Check for updates",
  "up_to_date": "You have the latest version",
@@ -177,6 +185,14 @@ export const en = {
 export type StringKey = keyof typeof en;
 
 export const kn: Partial<Record<StringKey, string>> = {
+ "likely": "ಸಾಧ್ಯತೆ",
+ "lv_now": "ಈಗ",
+ "lv_at": "ಹೊರಡುವುದು",
+ "leaves_in": "{n} ನಿಮಿಷದಲ್ಲಿ ಹೊರಡುತ್ತದೆ",
+ "leaves_now": "ಈಗ ಹೊರಡುತ್ತಿದೆ",
+ "gone": "{n} ನಿಮಿಷ ಹಿಂದೆ ಹೊರಟಿತು",
+ "recent": "ಇತ್ತೀಚಿನವು",
+ "near_you": "ನಿಮ್ಮ ಹತ್ತಿರ",
  "share_plan": "ಈ ಯೋಜನೆ ಹಂಚಿಕೊಳ್ಳಿ",
  "check_updates": "ಅಪ್‌ಡೇಟ್ ಪರಿಶೀಲಿಸಿ",
  "up_to_date": "ನಿಮ್ಮಲ್ಲಿ ಹೊಸ ಆವೃತ್ತಿ ಇದೆ",
@@ -349,6 +365,14 @@ export const kn: Partial<Record<StringKey, string>> = {
 };
 
 export const hi: Partial<Record<StringKey, string>> = {
+ "likely": "संभवतः",
+ "lv_now": "अभी",
+ "lv_at": "निकलें",
+ "leaves_in": "{n} मिनट में निकलेगी",
+ "leaves_now": "अभी निकल रही है",
+ "gone": "{n} मिनट पहले निकल गई",
+ "recent": "हाल की यात्राएँ",
+ "near_you": "आपके पास",
  "share_plan": "यह योजना शेयर करें",
  "check_updates": "अपडेट देखें",
  "up_to_date": "आपके पास नया संस्करण है",
@@ -521,6 +545,14 @@ export const hi: Partial<Record<StringKey, string>> = {
 };
 
 export const ta: Partial<Record<StringKey, string>> = {
+ "likely": "பெரும்பாலும்",
+ "lv_now": "இப்போது",
+ "lv_at": "புறப்படும்",
+ "leaves_in": "{n} நிமிடத்தில் புறப்படும்",
+ "leaves_now": "இப்போது புறப்படுகிறது",
+ "gone": "{n} நிமிடம் முன் புறப்பட்டது",
+ "recent": "சமீபத்தியவை",
+ "near_you": "உங்கள் அருகில்",
  "share_plan": "இந்தத் திட்டத்தைப் பகிர்",
  "check_updates": "புதுப்பிப்பைச் சரிபார்",
  "up_to_date": "உங்களிடம் புதிய பதிப்பு உள்ளது",
@@ -693,6 +725,14 @@ export const ta: Partial<Record<StringKey, string>> = {
 };
 
 export const te: Partial<Record<StringKey, string>> = {
+ "likely": "బహుశా",
+ "lv_now": "ఇప్పుడు",
+ "lv_at": "బయలుదేరేది",
+ "leaves_in": "{n} నిమిషాల్లో బయలుదేరుతుంది",
+ "leaves_now": "ఇప్పుడే బయలుదేరుతోంది",
+ "gone": "{n} నిమిషాల క్రితం వెళ్ళింది",
+ "recent": "ఇటీవలివి",
+ "near_you": "మీ దగ్గర",
  "share_plan": "ఈ ప్లాన్ షేర్ చేయండి",
  "check_updates": "అప్‌డేట్ చూడండి",
  "up_to_date": "మీ దగ్గర తాజా వెర్షన్ ఉంది",
