@@ -4,6 +4,11 @@ export type Lang = (typeof LANGS)[number][0];
 export const LOCALE: Record<Lang, string> = {"en":"en-IN","kn":"kn-IN","hi":"hi-IN","ta":"ta-IN","te":"te-IN"};
 
 export const en = {
+ "last_train": "Last train that gets you there leaves {s} at {t}",
+ "last_tag": "Last train",
+ "held_wait": "Last train, waits for connecting passengers",
+ "missed": "Missed it? Next train",
+ "towards_big": "Towards {s}",
  "likely": "likely",
  "lv_now": "Now",
  "lv_at": "Leave at",
@@ -185,6 +190,11 @@ export const en = {
 export type StringKey = keyof typeof en;
 
 export const kn: Partial<Record<StringKey, string>> = {
+ "last_train": "ಅಲ್ಲಿಗೆ ತಲುಪಿಸುವ ಕೊನೆಯ ರೈಲು {s} ನಿಂದ {t} ಕ್ಕೆ ಹೊರಡುತ್ತದೆ",
+ "last_tag": "ಕೊನೆಯ ರೈಲು",
+ "held_wait": "ಕೊನೆಯ ರೈಲು, ಸಂಪರ್ಕ ಪ್ರಯಾಣಿಕರಿಗಾಗಿ ಕಾಯುತ್ತದೆ",
+ "missed": "ತಪ್ಪಿತೇ? ಮುಂದಿನ ರೈಲು",
+ "towards_big": "{s} ಕಡೆಗೆ",
  "likely": "ಸಾಧ್ಯತೆ",
  "lv_now": "ಈಗ",
  "lv_at": "ಹೊರಡುವುದು",
@@ -365,6 +375,11 @@ export const kn: Partial<Record<StringKey, string>> = {
 };
 
 export const hi: Partial<Record<StringKey, string>> = {
+ "last_train": "वहाँ पहुँचाने वाली आखिरी मेट्रो {s} से {t} पर निकलती है",
+ "last_tag": "आखिरी मेट्रो",
+ "held_wait": "आखिरी मेट्रो, कनेक्टिंग यात्रियों का इंतज़ार करती है",
+ "missed": "छूट गई? अगली मेट्रो",
+ "towards_big": "{s} की ओर",
  "likely": "संभवतः",
  "lv_now": "अभी",
  "lv_at": "निकलें",
@@ -545,6 +560,11 @@ export const hi: Partial<Record<StringKey, string>> = {
 };
 
 export const ta: Partial<Record<StringKey, string>> = {
+ "last_train": "அங்கு செல்லும் கடைசி ரயில் {s} இலிருந்து {t} க்கு புறப்படும்",
+ "last_tag": "கடைசி ரயில்",
+ "held_wait": "கடைசி ரயில், இணைப்பு பயணிகளுக்காக காத்திருக்கும்",
+ "missed": "தவறிவிட்டதா? அடுத்த ரயில்",
+ "towards_big": "{s} நோக்கி",
  "likely": "பெரும்பாலும்",
  "lv_now": "இப்போது",
  "lv_at": "புறப்படும்",
@@ -725,6 +745,11 @@ export const ta: Partial<Record<StringKey, string>> = {
 };
 
 export const te: Partial<Record<StringKey, string>> = {
+ "last_train": "అక్కడికి చేర్చే చివరి రైలు {s} నుండి {t} కి బయలుదేరుతుంది",
+ "last_tag": "చివరి రైలు",
+ "held_wait": "చివరి రైలు, కనెక్టింగ్ ప్రయాణికుల కోసం ఆగుతుంది",
+ "missed": "మిస్ అయ్యారా? తదుపరి రైలు",
+ "towards_big": "{s} వైపు",
  "likely": "బహుశా",
  "lv_now": "ఇప్పుడు",
  "lv_at": "బయలుదేరేది",

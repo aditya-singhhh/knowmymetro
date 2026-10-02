@@ -23,6 +23,7 @@ export interface Tuning {
   ridePenalty: number;                          // minutes per extra ride
   tightPenalty: number;
   maxReverseRide: number;                       // seconds
+  lastTrainHold: number;                        // seconds a last train waits for a connecting line's passengers
 }
 export const DEFAULT_TUNING: Tuning = {
   seatChance: [0.1, 0.5, 0.8, 0.95],
@@ -30,6 +31,7 @@ export const DEFAULT_TUNING: Tuning = {
   ridePenalty: 4,
   tightPenalty: 3,
   maxReverseRide: 20 * 60,
+  lastTrainHold: 5 * 60,
 };
 
 /** Measured or reported change times: key `${station}|${fromLine}${dir}>${toLine}` */
@@ -80,7 +82,7 @@ export function plan(input: EngineInput): PlanResponse {
   /* ---- seat model ---- */
   const seatOf = (l: RideLeg): SeatClass => seatClass({ before: l.before, frac: l.frac, peak: work && isPeak(tt, service, l.dep) });
   const seatChance = (l: RideLeg): number => {
-    const c = input.crowd?.[`${service}|${l.origin}|${fmt(l.t0)}|${l.from}`];
+    const c = input.crowd?.[`${service}|${l.origin}|${fmt(l.t0 - (l.held ?? 0))}|${l.from}`];
     const prior = tuning.seatChance[seatOf(l)];
     if (!c || c.n < 1) return prior;
     const w = Math.min(1, c.n / 8);               // trust reports more as they add up
@@ -88,7 +90,7 @@ export function plan(input: EngineInput): PlanResponse {
   };
 
   /* ---- boarding index ---- */
-  const boardCache = new Map<string, { pattern: number; t0: number; ia: number; dep: number; line: LineId; dir: number }[]>();
+  const boardCache = new Map<string, { pattern: number; t0: number; ia: number; dep: number; line: LineId; dir: number; held?: number }[]>();
   const boardings = (stn: string) => {
     let list = boardCache.get(stn);
     if (list) return list;
@@ -103,10 +105,18 @@ export function plan(input: EngineInput): PlanResponse {
     boardCache.set(stn, list);
     return list;
   };
+  /** latest departure per line and direction at a station: the night's last train that way */
+  const lastCache = new Map<string, Record<string, number>>();
+  const lastDeps = (stn: string) => {
+    let m = lastCache.get(stn);
+    if (!m) { m = {}; for (const e of boardings(stn)) m[e.line + e.dir] = Math.max(m[e.line + e.dir] ?? 0, e.dep); lastCache.set(stn, m); }
+    return m;
+  };
   const makeLeg = (ev: ReturnType<typeof boardings>[number], j: number): RideLeg => {
     const p = tt.patterns[ev.pattern], s = p.stops;
     return { line: p.line, from: s[ev.ia], to: s[j], dep: ev.dep, arr: ev.t0 + p.arr[j], origin: s[0], start: ev.t0, terminus: s[s.length - 1],
-      before: ev.ia, stops: j - ev.ia, frac: ev.ia / (s.length - 1), work, dir: ev.dir, platform: p.pf[ev.ia] ?? null, t0: ev.t0, pattern: ev.pattern };
+      before: ev.ia, stops: j - ev.ia, frac: ev.ia / (s.length - 1), work, dir: ev.dir, platform: p.pf[ev.ia] ?? null, t0: ev.t0, pattern: ev.pattern,
+      ...(ev.held ? { held: ev.held } : {}) };
   };
   const changeNeed = (prev: RideLeg, next: { line: LineId; dir: number }): ChangeReq => {
     if (prev.line !== next.line) {
@@ -135,9 +145,22 @@ export function plan(input: EngineInput): PlanResponse {
     for (const lab of frontier) {
       const prev = lab.legs[lab.legs.length - 1];
       const perDir: Record<string, number> = {};
-      for (const ev of boardings(lab.stn)) {
+      for (const ev0 of boardings(lab.stn)) {
+        let ev = ev0;
         if (r === 0) { if (ev.dep < winStart) continue; if (ev.dep > winEnd) break; }
-        else { if (ev.dep < lab.time) continue; if (ev.dep > lab.time + 35 * 60) break; }
+        else {
+          if (ev.dep < lab.time - tuning.lastTrainHold) continue;
+          if (ev.dep > lab.time + 35 * 60) break;
+          // Last train of the night on another line waits a few minutes for connecting passengers.
+          if (prev && prev.line !== ev.line && INTERCHANGES.has(lab.stn) && ev.dep === lastDeps(lab.stn)[ev.line + ev.dir]) {
+            const ready = prev.arr + changeNeed(prev, ev).need;
+            if (ready > ev.dep && ready - ev.dep <= tuning.lastTrainHold) {
+              const wait = ready - ev.dep;
+              ev = { ...ev, dep: ev.dep + wait, t0: ev.t0 + wait, held: wait };
+            }
+          }
+          if (ev.dep < lab.time) continue;
+        }
         if (prev && prev.line === ev.line) {
           if (ev.ia !== 0) continue;                                     // only for a train that starts here
           if (seatOf(prev) >= 2) continue;                               // already seated: stay on
@@ -171,7 +194,9 @@ export function plan(input: EngineInput): PlanResponse {
     const changes: Change[] = legs.slice(0, -1).map((l, i) => {
       const c = changeNeed(l, legs[i + 1]), available = legs[i + 1].dep - l.arr;
       if (c.kind !== 'line') return { kind: c.kind, at: l.to, available, walk: c.need, tight: available - c.need < 60, coaches: [], known: true };
-      return { kind: 'line', at: l.to, available, ...coachAdvice(available, c, pace, women) };
+      const held = !!legs[i + 1].held;
+      const advice = coachAdvice(available, c, pace, women);
+      return { kind: 'line', at: l.to, available, ...advice, ...(held ? { held: true, tight: false } : {}) };
     });
     const standLegs = legs.reduce((s, l, i) => s + (seats[i] < 2 ? (l.arr - l.dep) / 60 : 0), 0);
     const trickIdx = changes.findIndex((c, i) => c.kind !== 'line' && seats[i + 1] >= 2);
@@ -192,6 +217,13 @@ export function plan(input: EngineInput): PlanResponse {
   }
   // drop "leave earlier only to wait longer": same or later arrival, no less standing, from an earlier first train
   feasible = feasible.filter((o) => !feasible.some((b) => b !== o && b.dep > o.dep && b.arr <= o.arr && b.standMinutes <= o.standMinutes + 0.01 && b.rides <= o.rides));
+  // Late at night, warn when the last train that still gets you there is coming up.
+  let last: PlanResponse['last'] = null;
+  let lastOption: (typeof all)[number] | null = null;
+  if (!byMode && T >= 21 * 3600) {
+    const latest = all.reduce((a, b) => (b.dep > a.dep || (b.dep === a.dep && b.arr < a.arr) ? b : a));
+    if (latest.dep <= winEnd - 10 * 60) { last = { dep: latest.dep, arr: latest.arr }; lastOption = latest; }
+  }
   const minDur = Math.min(...feasible.map((o) => o.arr - o.dep)), minArr = Math.min(...feasible.map((o) => o.arr));
   feasible = feasible.filter((o) => o.arr - o.dep <= minDur * 1.35 + 600 && (byMode || o.arr <= minArr + 1800));
 
@@ -222,7 +254,12 @@ export function plan(input: EngineInput): PlanResponse {
     options.push(clean);
     if (options.length >= 8) break;
   }
-  return { timetable: tt.version, service, best: 0, options, fallback, tradeoff };
+  // the last train must always be openable, even if it arrives much later than the others
+  if (lastOption && !options.some((o) => o.dep === lastOption.dep && o.arr === lastOption.arr)) {
+    const { rides: _r, tight: _t, ...clean } = lastOption;
+    options.push(clean);
+  }
+  return { timetable: tt.version, service, best: 0, options, fallback, tradeoff, last };
 }
 
 function longestSeated(o: PlanOption) {

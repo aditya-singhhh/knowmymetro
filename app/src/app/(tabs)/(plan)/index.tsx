@@ -205,12 +205,15 @@ export default function Plan() {
             {plan.data.fallback ? (
               <Notice text={`${t(plan.data.fallback.achieved === 'fast' ? 'fb_fast' : 'fb_long', { when: mode === 'by' ? t('by_t', { t: time }) : t('in_2h') })}${plan.data.fallback.seatedArrival ? ' ' + t('seat_if_late', { t: fmt(plan.data.fallback.seatedArrival) }) : ''}`} />
             ) : null}
+            {plan.data.last && mode !== 'by' ? (
+              <Notice tone={plan.data.last.dep - nowSec < 30 * 60 ? 'bad' : 'meh'} text={t('last_train', { s: stationName(tt, from, lang), t: fmt(plan.data.last.dep) })} />
+            ) : null}
             {plan.data.tradeoff ? (
               <T v="sub" color={c.ink2} style={{ paddingHorizontal: space.xs }}>
                 {plan.data.tradeoff.extraMinutes > 0 ? t(mode === 'by' ? 'trade_by' : 'trade_after', { e: plan.data.tradeoff.extraMinutes, s: plan.data.tradeoff.standingSaved }) : t('trade_free')}
               </T>
             ) : null}
-            {ordered.map((o, i) => <OptionCard key={i} option={o} best={i === 0} nowSec={live ? nowSec : null} onPress={() => { remember(); router.push({ pathname: '/(tabs)/(plan)/trip', params: { id: putTrip(o, reqDay) } }); }} />)}
+            {ordered.map((o, i) => <OptionCard key={i} option={o} best={i === 0} last={!!plan.data?.last && o.dep === plan.data.last.dep && o.arr === plan.data.last.arr} nowSec={live ? nowSec : null} onPress={() => { remember(); router.push({ pathname: '/(tabs)/(plan)/trip', params: { id: putTrip(o, reqDay) } }); }} />)}
           </View>
         ) : null}
       </Screen>
@@ -220,7 +223,7 @@ export default function Plan() {
   );
 }
 
-function OptionCard({ option, best, nowSec, onPress }: { option: PlanOption; best: boolean; nowSec: number | null; onPress: () => void }) {
+function OptionCard({ option, best, last, nowSec, onPress }: { option: PlanOption; best: boolean; last: boolean; nowSec: number | null; onPress: () => void }) {
   const { t, tt, lang } = useApp();
   const { c } = useTheme();
   const seated = option.legs.filter((l) => l.seat >= 2);
@@ -233,7 +236,8 @@ function OptionCard({ option, best, nowSec, onPress }: { option: PlanOption; bes
       <Card style={{ gap: space.m }}>
         <View style={s.optHead}>
           <T v="title" style={type.time}>{fmt(option.dep)} – {fmt(option.arr)}</T>
-          {best ? <View style={[s.tag, { backgroundColor: c.tintBg }]}><T v="caption" color={c.tint}>{t('best')}</T></View> : <T v="sub" color={c.ink2}>{mins(option.arr - option.dep)} {t('min')}</T>}
+          {last ? <View style={[s.tag, { backgroundColor: c.badBg }]}><T v="caption" color={c.bad}>{t('last_tag')}</T></View>
+            : best ? <View style={[s.tag, { backgroundColor: c.tintBg }]}><T v="caption" color={c.tint}>{t('best')}</T></View> : <T v="sub" color={c.ink2}>{mins(option.arr - option.dep)} {t('min')}</T>}
         </View>
         {nowSec != null && option.dep - nowSec < 90 * 60 ? (
           <T v="sub" color={option.dep - nowSec < 0 ? c.bad : c.tint} style={{ fontWeight: '600', marginTop: -space.s }}>
@@ -254,7 +258,7 @@ function OptionCard({ option, best, nowSec, onPress }: { option: PlanOption; bes
             <View style={[s.optFoot, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep, paddingTop: space.m }]}>
               <View style={{ flex: 1 }}>
                 <T v="sub" style={{ fontWeight: '600' }}>{t('board_coach', { c: coachWords(x.coaches, t('or'), t) })}{x.known ? '' : ` (${t('likely')})`}</T>
-                <T v="caption" color={x.tight ? c.bad : c.ink2} style={{ fontWeight: '400' }}>{t(x.tight ? 'tight_change' : 'quick_change', { s: stationName(tt, x.at, lang) })}</T>
+                <T v="caption" color={x.tight ? c.bad : c.ink2} style={{ fontWeight: '400' }}>{x.held ? t('held_wait') : t(x.tight ? 'tight_change' : 'quick_change', { s: stationName(tt, x.at, lang) })}</T>
               </View>
               <CoachStrip coaches={x.coaches} line={option.legs[ci].line} />
             </View>

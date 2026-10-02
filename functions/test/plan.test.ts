@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fmt, type PlanRequest, type Timetable } from '@kmm/shared';
-import { plan } from '../src/engine/plan';
+import { DEFAULT_TUNING, plan } from '../src/engine/plan';
 import timetable from '../../data/timetable.json';
 
 const tt = timetable as unknown as Timetable;
@@ -100,4 +100,18 @@ test('coach advice from JP Nagar stays front and known', () => {
   const ch = run({}).options[0].changes[0];
   assert.ok(ch.coaches.length > 0 && ch.coaches.every((n) => n <= 3), String(ch.coaches));
   assert.equal(ch.known, true);
+});
+
+test('last train at Majestic waits a few minutes for the connecting line (Mysore Road to Silk Institute)', () => {
+  const held = run({ from: 'MYRD', to: 'APTS', mode: 'after', time: '22:30', priority: 'fast' });
+  const strict = plan({ tt, req: { from: 'MYRD', to: 'APTS', date: TUESDAY, time: '22:30', mode: 'after', priority: 'fast' }, tuning: { ...DEFAULT_TUNING, lastTrainHold: 0 } });
+  assert.ok(held.last && strict.last && held.last.dep > strict.last.dep, `held ${held.last?.dep} vs strict ${strict.last?.dep}`);
+  const opt = held.options.find((o) => o.dep === held.last!.dep && o.arr === held.last!.arr);
+  assert.ok(opt, 'last train is listed');
+  assert.ok(opt!.changes.some((c) => c.held) && opt!.legs.some((l) => (l.held ?? 0) > 0 && l.held! <= 300));
+});
+
+test('daytime trains never wait for connections', () => {
+  for (const o of run({ from: 'YPM', to: 'KRAM', mode: 'after', time: '11:00' }).options) assert.ok(!o.legs.some((l) => l.held));
+  assert.equal(run({ from: 'YPM', to: 'KRAM', mode: 'after', time: '11:00' }).last, null);
 });

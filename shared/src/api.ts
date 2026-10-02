@@ -24,6 +24,7 @@ export interface Change {
   tight: boolean;
   coaches: number[];  // coaches to board on the previous ride (1 = front); empty = any
   known: boolean;     // change time is measured, not a rough guess
+  held?: boolean;     // the next train is the last one and waits for this connection
 }
 
 export interface PlanOption {
@@ -44,6 +45,8 @@ export interface PlanResponse {
   options: PlanOption[];
   fallback: null | { achieved: Priority; seatedArrival: number | null };
   tradeoff: null | { extraMinutes: number; standingSaved: number };
+  /** late at night: the last departure that still gets you there (leave-now / leave-at only) */
+  last?: { dep: number; arr: number } | null;
   error?: 'same-station' | 'no-route' | 'no-service' | 'none-in-time';
   earliestArrival?: number;
 }

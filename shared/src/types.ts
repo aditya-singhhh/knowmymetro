@@ -56,6 +56,8 @@ export interface Leg {
   work: boolean;      // working-day timetable
   dir: number;        // +1 / -1 along the line's station order
   platform: string | null;
+  /** last train of the night held this many seconds for a connecting line's passengers */
+  held?: number;
 }
 
 export type SeatClass = 0 | 1 | 2 | 3; // 0 likely full, 1 maybe, 2 likely seat, 3 train starts here
