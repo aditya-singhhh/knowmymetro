@@ -24,5 +24,4 @@ if (process.argv[2] === 'export') {
   const trips = Object.values(tt.departures).reduce((n, l) => n + l.length, 0);
   console.log(`timetable ${tt.version}: ${tt.patterns.length} patterns, ${trips} trips`);
   console.log(log.filter((l) => !l.startsWith('!')).join('\n'));
-  console.log(`${log.filter((l) => l.startsWith('!')).length} arrival-time warnings (see data/timetable/CHANGES.txt)`);
 }

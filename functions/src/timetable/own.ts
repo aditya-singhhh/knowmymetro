@@ -169,7 +169,7 @@ function timeAt(s: Src, p: SrcPattern, t0: number, stn: string): number | null {
  * feed built them from the same timetable bands as their neighbours, so they get the same correction as the nearest
  * matched train ("carried"), unless an observation already placed them.
  */
-function applyBoard(s: Src, o: BoardObservation, log: string[], seen: Set<string>) {
+function applyBoard(s: Src, o: BoardObservation, log: string[], seen: Map<string, number>, samples: Sample[]) {
   const dep = (s.departures[o.service] ||= {});
   const dir = dirOf(s.meta, o.line, o.station, o.towards);
   const rows = o.trains.filter((t) => t.from !== '?' && t.to !== '?');
@@ -183,25 +183,35 @@ function applyBoard(s: Src, o: BoardObservation, log: string[], seen: Set<string
     if (!sameDir(p) || !passes(p)) continue;
     const k = p.stops.findIndex((x) => x.stn === o.station);
     const list = dep[p.id] ?? [];
-    const keep = list.filter((t) => { const here = at(t) + off(p.stops[k].dep); if (here >= lo && here <= hi) { old.push(here); return false; } return true; });
+    // trains an earlier board already placed (e.g. at the terminus) stay; this board only confirms them
+    const keep = list.filter((t) => { const here = at(t) + off(p.stops[k].dep); if (here >= lo && here <= hi && !seen.has(`${o.service}|${p.id}|${t}`)) { old.push(here); return false; } return true; });
     if (list.length) dep[p.id] = keep;
   }
   // add what the board shows
   const now: number[] = [];
+  let confirmed = 0;
+  const sample = (pid: string, t0: string, k: number, j: number, d: number) => samples.push({ svc: o.service, pid, k, j, d });
   for (const t of rows) {
     const p = ensurePattern(s, o.line, t.from, t.to, log);
     const k = p.stops.findIndex((x) => x.stn === o.station);
-    const t0 = at(t.dep) - off(p.stops[k].dep);
-    (dep[p.id] ||= []).push(clock(t0));
-    seen.add(`${o.service}|${p.id}|${clock(t0)}`);
-    now.push(at(t.dep));
-    if (t.pf) p.stops[k].pf = t.pf;
+    const placed = (dep[p.id] ?? []).find((x) => seen.has(`${o.service}|${p.id}|${x}`) && Math.abs(at(x) + off(p.stops[k].dep) - at(t.dep)) <= 150);
+    const t0 = placed ? at(placed) : at(t.dep) - off(p.stops[k].dep);
+    const pk = placed ? seen.get(`${o.service}|${p.id}|${placed}`)! : k;   // where this train's time is anchored
+    if (placed) {
+      confirmed++;
+      sample(p.id, placed, pk, k, at(t.dep) - (t0 + off(p.stops[k].dep)));
+    } else {
+      (dep[p.id] ||= []).push(clock(t0));
+      seen.set(`${o.service}|${p.id}|${clock(t0)}`, k);
+      now.push(at(t.dep));
+      if (t.pf) p.stops[k].pf = t.pf;
+    }
     for (const [stn, a] of Object.entries(t.arrive ?? {})) {
       const j = p.stops.findIndex((x) => x.stn === stn);
       if (j < 0) continue;
-      const ours = t0 + off(p.stops[j].arr);
-      const diff = Math.round((at(a) - ours) / 60);
-      if (Math.abs(diff) >= 2) log.push(`! ${p.id} ${t.dep}: board says ${stn} ${a}, our running time gives ${clock(ours).slice(0, 5)} (${diff > 0 ? '+' : ''}${diff} min)`);
+      let d = at(a) - (t0 + off(p.stops[j].arr));
+      if (d < -43200) d += 86400;
+      sample(p.id, clock(t0), pk, j, d);
     }
   }
   // how much each of our old trains moved: pair old and new in order of time, nearest first, within 6 min
@@ -231,7 +241,51 @@ function applyBoard(s: Src, o: BoardObservation, log: string[], seen: Set<string
     }
   }
   const moved = shifts.filter(([, d]) => d).length;
-  log.push(`~ board ${o.station} ${o.line} towards ${o.towards} ${o.service} ${clock(lo + 60).slice(0, 5)}-${clock(hi - 60).slice(0, 5)}: ${old.length} trains -> ${rows.length} (${moved} moved, ${old.length - shifts.length} dropped, ${rows.length - shifts.length} added), ${carried} short trips carried (${o.source})`);
+  log.push(`~ board ${o.station} ${o.line} towards ${o.towards} ${o.service} ${clock(lo + 60).slice(0, 5)}-${clock(hi - 60).slice(0, 5)}: ${confirmed} already placed, ${old.length} others -> ${rows.length - confirmed} (${moved} moved, ${old.length - shifts.length} dropped, ${rows.length - confirmed - shifts.length} added), ${carried} short trips carried (${o.source})`);
+}
+
+interface Sample { svc: string; pid: string; k: number; j: number; d: number }
+
+/**
+ * Boards also tell us how long trains take: a train placed at one station shows up at another station's board,
+ * or the board says when it arrives somewhere. If most trains of a pattern disagree with our running time the same
+ * way (median of at least 3, by at least 30 s), the pattern's times are bent to match: corrections are pinned at the
+ * station the trains were placed from and spread linearly between the measured stations. A few unusual trains
+ * (late night, delays) don't move the median.
+ */
+function fitRunningTimes(s: Src, samples: Sample[], log: string[]) {
+  const by = new Map<string, Sample[]>();
+  for (const x of samples) (by.get(x.pid) ?? by.set(x.pid, []).get(x.pid)!).push(x);
+  for (const [pid, xs] of by) {
+    const p = s.patterns.find((q) => q.id === pid)!;
+    // use the samples of the most common anchor station
+    const ks = new Map<number, number>(); xs.forEach((x) => ks.set(x.k, (ks.get(x.k) ?? 0) + 1));
+    const k = [...ks].sort((a, b) => b[1] - a[1])[0][0];
+    const at_ = new Map<number, number[]>();
+    xs.filter((x) => x.k === k && x.j !== k).forEach((x) => (at_.get(x.j) ?? at_.set(x.j, []).get(x.j)!).push(x.d));
+    const anchors: [number, number][] = [[k, 0]];
+    for (const [j, ds] of at_) {
+      if (ds.length < 3) continue;
+      const m = ds.sort((a, b) => a - b)[Math.floor(ds.length / 2)];
+      anchors.push([j, Math.abs(m) >= 30 ? m : 0]);
+    }
+    if (anchors.every(([, d]) => d === 0)) continue;
+    anchors.sort((a, b) => a[0] - b[0]);
+    const T = (i: number) => off(p.stops[i].dep);
+    const corr = (i: number) => {
+      if (i <= anchors[0][0]) return anchors[0][1];
+      if (i >= anchors[anchors.length - 1][0]) return anchors[anchors.length - 1][1];
+      const n = anchors.findIndex(([j]) => j >= i), [a, da] = anchors[n - 1], [b, db] = anchors[n];
+      return da + ((db - da) * (T(i) - T(a))) / Math.max(1, T(b) - T(a));
+    };
+    const before = off(p.stops[p.stops.length - 1].arr);
+    const next = p.stops.map((x, i) => ({ arr: off(x.arr) + corr(i), dep: off(x.dep) + corr(i) }));
+    const base = next[0].dep;   // keep offsets relative to the first stop (start times move with it)
+    if (next.some((x, i) => i > 0 && x.arr < next[i - 1].dep)) { log.push(`  ${pid}: measured running times don't fit, kept`); continue; }
+    p.stops.forEach((x, i) => { x.arr = offset(Math.round(next[i].arr - base)); x.dep = offset(Math.round(next[i].dep - base)); });
+    if (base) for (const d of Object.values(s.departures)) if (d[pid]) d[pid] = d[pid].map((t) => clock(at(t) + Math.round(base)));
+    log.push(`~ running times ${pid}: ${anchors.map(([j, d]) => `${p.stops[j].stn} ${d >= 0 ? '+' : ''}${Math.round(d)}s`).join(', ')} (end to end ${offset(before)} -> ${offset(off(p.stops[p.stops.length - 1].arr))})`);
+  }
 }
 
 /**
@@ -248,8 +302,10 @@ export function build(dir: string): { tt: Timetable; log: string[] } {
   for (const o of obs) if (o.type === 'run') applyRun(s, o, log);
   const end = (o: BoardObservation) => { const st = lineStations(s.meta, o.line); return o.station === st[0] || o.station === st[st.length - 1] ? 0 : 1; };
   const boards = obs.filter((o): o is BoardObservation => o.type === 'board').sort((a, b) => end(a) - end(b) || a.date.localeCompare(b.date));
-  const seen = new Set<string>();
-  for (const o of boards) applyBoard(s, o, log, seen);
+  const seen = new Map<string, number>();
+  const samples: Sample[] = [];
+  for (const o of boards) applyBoard(s, o, log, seen, samples);
+  fitRunningTimes(s, samples, log);
   for (const d of Object.values(s.departures)) for (const k of Object.keys(d)) d[k] = [...new Set(d[k])].sort();
   return { tt: compile(s), log };
 }
