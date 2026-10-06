@@ -7,6 +7,8 @@ import { stationName, type Timetable } from '@kmm/shared';
 import { shareSnapshot } from './firebase';
 import type { LiveTrip } from './live';
 
+/** Off until we have our own domain; the server side (shareView, web/share.html) is already deployed. */
+export const SHARE_ENABLED = false;
 export const SHARE_BASE = 'https://knowmymetro.web.app/t/';
 let token: string | null = null;
 let lastSent = 0;

@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { fmt, secondsNow, stationName, type LiveStatus } from '@kmm/shared';
 import { useApp } from '@/core/app-state';
 import { currentLive, doorsOpened, onLive, stopLive, type LiveTrip } from '@/core/live';
-import { isSharing, startShare } from '@/core/share-live';
+import { isSharing, SHARE_ENABLED, startShare } from '@/core/share-live';
 import { Share } from 'react-native';
 import { Button, Card, T, Tap } from './components';
 import { space, type, useTheme } from './theme';
@@ -138,7 +138,7 @@ export function LiveCard({ live, onRide, rideMsg, onMissed, onStations }: { live
         {st.leg + 1 < legs.length && st.phase !== 'changing' ? (
           <T v="caption" color={c.ink2} style={{ fontWeight: '400', marginRight: space.m }} numberOfLines={1}>{t('then_line', { line: lineName(legs[st.leg + 1].line), s: nm(legs[st.leg + 1].to) })}</T>
         ) : null}
-        {!watching ? (
+        {!watching && SHARE_ENABLED ? (
           <Tap onPress={async () => { const url = await startShare(tt, live); if (url) Share.share({ message: `${t('share_live_msg')} ${url}` }).catch(() => undefined); }} hitSlop={10} style={{ marginRight: space.l }}>
             <T v="sub" color={c.tint} style={{ fontWeight: '600' }}>{isSharing() ? t('sharing') : t('share_live')}</T>
           </Tap>
