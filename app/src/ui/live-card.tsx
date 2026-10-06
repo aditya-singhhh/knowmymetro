@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { fmt, secondsNow, stationName, type LiveStatus } from '@kmm/shared';
 import { useApp } from '@/core/app-state';
-import { currentLive, onLive, stopLive, type LiveTrip } from '@/core/live';
+import { currentLive, doorsOpened, onLive, stopLive, type LiveTrip } from '@/core/live';
 import { Button, Card, T, Tap } from './components';
 import { space, type, useTheme } from './theme';
 import { coachWords } from './trip-view';
@@ -101,6 +101,14 @@ export function LiveCard({ live, onRide, rideMsg, onMissed, onStations }: { live
         {st.switched ? <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('switched')}</T> : null}
       </View>
 
+      {/* no GPS (underground): one tap at each stop keeps the position right and maps the tunnel */}
+      {!watching && st.phase === 'riding' && st.source !== 'gps' ? (
+        <Tap onPress={doorsOpened} style={[s.doors, { backgroundColor: c.tintBg }]} accessibilityRole="button">
+          <T v="sub" color={c.tint} style={{ fontWeight: '700' }}>{t('doors_btn')}</T>
+          <T v="caption" color={c.tint} style={{ fontWeight: '400' }}>{t('doors_hint')}</T>
+        </Tap>
+      ) : null}
+
       {stops.length > 1 ? (
         <View style={{ gap: 4 }}>
           <View style={s.track}>
@@ -145,6 +153,7 @@ export function LiveCard({ live, onRide, rideMsg, onMissed, onStations }: { live
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.s },
   dot: { width: 8, height: 8, borderRadius: 4 },
+  doors: { borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, gap: 2 },
   pill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   track: { height: 18, justifyContent: 'center', marginHorizontal: 7 },
   rail: { position: 'absolute', left: 0, right: 0, height: 4, borderRadius: 2 },

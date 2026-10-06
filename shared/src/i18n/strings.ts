@@ -4,6 +4,8 @@ export type Lang = (typeof LANGS)[number][0];
 export const LOCALE: Record<Lang, string> = {"en":"en-IN","kn":"kn-IN","hi":"hi-IN","ta":"ta-IN","te":"te-IN"};
 
 export const en = {
+ "doors_btn": "Doors opened",
+ "doors_hint": "No GPS here. Tap at each stop to keep your position exact.",
  "arrived_at": "Reached {s}",
  "you_board": "You board here",
  "you_alight": "You get off here",
@@ -233,6 +235,8 @@ export const en = {
 export type StringKey = keyof typeof en;
 
 export const kn: Partial<Record<StringKey, string>> = {
+ "doors_btn": "ಬಾಗಿಲು ತೆರೆಯಿತು",
+ "doors_hint": "ಇಲ್ಲಿ GPS ಇಲ್ಲ. ಸರಿಯಾದ ಸ್ಥಾನಕ್ಕಾಗಿ ಪ್ರತಿ ನಿಲ್ದಾಣದಲ್ಲಿ ಒತ್ತಿ.",
  "arrived_at": "{s} ತಲುಪಿದೆ",
  "you_board": "ನೀವು ಇಲ್ಲಿ ಹತ್ತುತ್ತೀರಿ",
  "you_alight": "ನೀವು ಇಲ್ಲಿ ಇಳಿಯುತ್ತೀರಿ",
@@ -461,6 +465,8 @@ export const kn: Partial<Record<StringKey, string>> = {
 };
 
 export const hi: Partial<Record<StringKey, string>> = {
+ "doors_btn": "दरवाज़े खुले",
+ "doors_hint": "यहाँ GPS नहीं है। सही जगह के लिए हर स्टेशन पर दबाएँ।",
  "arrived_at": "{s} पहुँच गई",
  "you_board": "आप यहाँ चढ़ेंगे",
  "you_alight": "आप यहाँ उतरेंगे",
@@ -689,6 +695,8 @@ export const hi: Partial<Record<StringKey, string>> = {
 };
 
 export const ta: Partial<Record<StringKey, string>> = {
+ "doors_btn": "கதவுகள் திறந்தன",
+ "doors_hint": "இங்கே GPS இல்லை. சரியான இடத்துக்கு ஒவ்வொரு நிலையத்திலும் தட்டவும்.",
  "arrived_at": "{s} ஐ அடைந்தது",
  "you_board": "இங்கே ஏறுவீர்கள்",
  "you_alight": "இங்கே இறங்குவீர்கள்",
@@ -917,6 +925,8 @@ export const ta: Partial<Record<StringKey, string>> = {
 };
 
 export const te: Partial<Record<StringKey, string>> = {
+ "doors_btn": "తలుపులు తెరుచుకున్నాయి",
+ "doors_hint": "ఇక్కడ GPS లేదు. సరైన స్థానం కోసం ప్రతి స్టేషన్‌లో నొక్కండి.",
  "arrived_at": "{s} చేరింది",
  "you_board": "మీరు ఇక్కడ ఎక్కుతారు",
  "you_alight": "మీరు ఇక్కడ దిగుతారు",

@@ -11,7 +11,7 @@ import { secondsNow, serviceFor, ymd, LiveTracker, type LiveStatus, type PlanOpt
 import { track } from './analytics';
 import { getTrainDelay, shareTrainDelay } from './firebase';
 import { notifyNow } from './notify';
-import { onSample, startRecording, stopRecording, uploadPendingRecordings } from './recorder';
+import { markStation, onSample, startRecording, stopRecording, uploadPendingRecordings } from './recorder';
 
 export type LiveMode = 'watch' | 'ride';
 export interface LiveTrip { id: string; mode: LiveMode; option: PlanOption; date: Date; tracker: LiveTracker; status: LiveStatus }
@@ -144,4 +144,13 @@ function share(st: LiveStatus, now: number) {
   lastShared = Date.now();
   const leg = live.tracker.legs[st.leg];
   shareTrainDelay({ date: ymd(live.date), origin: leg.origin, start: leg.start, line: leg.line, delay: st.delay, at: now }).catch(() => undefined);
+}
+
+/** Rider tapped "Doors opened" (underground, no GPS): a sure station stop for the tracker and the recording. */
+export function doorsOpened() {
+  if (!live || live.mode !== 'ride') return;
+  const now = secondsNow();
+  live.tracker.stopped(now);
+  markStation(live.status.next ?? live.status.prev ?? null);
+  tick();
 }
