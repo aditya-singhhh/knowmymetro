@@ -1,0 +1,1037 @@
+{
+ "type": "board",
+ "source": "community screen recording (Where is my Train), checked against station board",
+ "date": "2026-10-06",
+ "service": "weekday",
+ "line": "GREEN",
+ "station": "NGSA",
+ "towards": "APTS",
+ "trains": [
+  {
+   "dep": "05:09",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "06:09"
+   }
+  },
+  {
+   "dep": "05:22",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "06:23"
+   }
+  },
+  {
+   "dep": "05:36",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "06:30"
+   }
+  },
+  {
+   "dep": "05:51",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "06:45"
+   }
+  },
+  {
+   "dep": "06:06",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "07:00"
+   }
+  },
+  {
+   "dep": "06:21",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "07:15"
+   }
+  },
+  {
+   "dep": "06:31",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "07:25"
+   }
+  },
+  {
+   "dep": "06:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "07:35"
+   }
+  },
+  {
+   "dep": "06:51",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "07:45"
+   }
+  },
+  {
+   "dep": "07:01",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "07:55"
+   }
+  },
+  {
+   "dep": "07:11",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "08:05"
+   }
+  },
+  {
+   "dep": "07:21",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "08:15"
+   }
+  },
+  {
+   "dep": "07:31",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "08:25"
+   }
+  },
+  {
+   "dep": "07:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "08:35"
+   }
+  },
+  {
+   "dep": "07:51",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "08:45"
+   }
+  },
+  {
+   "dep": "08:01",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "08:55"
+   }
+  },
+  {
+   "dep": "08:11",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "09:05"
+   }
+  },
+  {
+   "dep": "08:21",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "09:15"
+   }
+  },
+  {
+   "dep": "08:31",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "09:25"
+   }
+  },
+  {
+   "dep": "08:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "09:35"
+   }
+  },
+  {
+   "dep": "08:51",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "09:45"
+   }
+  },
+  {
+   "dep": "09:01",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "09:55"
+   }
+  },
+  {
+   "dep": "09:11",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "10:05"
+   }
+  },
+  {
+   "dep": "09:21",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "10:15"
+   }
+  },
+  {
+   "dep": "09:31",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "10:25"
+   }
+  },
+  {
+   "dep": "09:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "10:35"
+   }
+  },
+  {
+   "dep": "09:51",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "10:45"
+   }
+  },
+  {
+   "dep": "10:01",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "10:55"
+   }
+  },
+  {
+   "dep": "10:11",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "11:05"
+   }
+  },
+  {
+   "dep": "10:16",
+   "from": "NGSA",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "11:10"
+   }
+  },
+  {
+   "dep": "10:22",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "11:18"
+   }
+  },
+  {
+   "dep": "10:31",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "11:25"
+   }
+  },
+  {
+   "dep": "10:38",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "11:32"
+   }
+  },
+  {
+   "dep": "10:45",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "11:39"
+   }
+  },
+  {
+   "dep": "10:53",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "11:47"
+   }
+  },
+  {
+   "dep": "11:01",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "11:55"
+   }
+  },
+  {
+   "dep": "11:09",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "12:03"
+   }
+  },
+  {
+   "dep": "11:17",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "12:11"
+   }
+  },
+  {
+   "dep": "11:25",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "12:19"
+   }
+  },
+  {
+   "dep": "11:33",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "12:27"
+   }
+  },
+  {
+   "dep": "11:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "12:35"
+   }
+  },
+  {
+   "dep": "11:49",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "12:43"
+   }
+  },
+  {
+   "dep": "11:57",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "12:51"
+   }
+  },
+  {
+   "dep": "12:05",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "12:59"
+   }
+  },
+  {
+   "dep": "12:13",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "13:07"
+   }
+  },
+  {
+   "dep": "12:21",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "13:15"
+   }
+  },
+  {
+   "dep": "12:29",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "13:23"
+   }
+  },
+  {
+   "dep": "12:37",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "13:31"
+   }
+  },
+  {
+   "dep": "12:45",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "13:39"
+   }
+  },
+  {
+   "dep": "12:53",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "13:47"
+   }
+  },
+  {
+   "dep": "13:01",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "13:55"
+   }
+  },
+  {
+   "dep": "13:09",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "14:03"
+   }
+  },
+  {
+   "dep": "13:17",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "14:11"
+   }
+  },
+  {
+   "dep": "13:25",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "14:19"
+   }
+  },
+  {
+   "dep": "13:33",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "14:27"
+   }
+  },
+  {
+   "dep": "13:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "14:35"
+   }
+  },
+  {
+   "dep": "13:49",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "14:43"
+   }
+  },
+  {
+   "dep": "13:57",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "14:51"
+   }
+  },
+  {
+   "dep": "14:05",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "14:59"
+   }
+  },
+  {
+   "dep": "14:13",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "15:07"
+   }
+  },
+  {
+   "dep": "14:21",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "15:15"
+   }
+  },
+  {
+   "dep": "14:29",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "15:23"
+   }
+  },
+  {
+   "dep": "14:37",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "15:31"
+   }
+  },
+  {
+   "dep": "14:45",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "15:39"
+   }
+  },
+  {
+   "dep": "14:53",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "15:47"
+   }
+  },
+  {
+   "dep": "15:01",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "15:55"
+   }
+  },
+  {
+   "dep": "15:09",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "16:03"
+   }
+  },
+  {
+   "dep": "15:17",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "16:11"
+   }
+  },
+  {
+   "dep": "15:25",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "16:19"
+   }
+  },
+  {
+   "dep": "15:33",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "16:27"
+   }
+  },
+  {
+   "dep": "15:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "16:35"
+   }
+  },
+  {
+   "dep": "15:49",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "16:43"
+   }
+  },
+  {
+   "dep": "15:57",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "16:51"
+   }
+  },
+  {
+   "dep": "16:06",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "17:00"
+   }
+  },
+  {
+   "dep": "16:19",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "17:13"
+   }
+  },
+  {
+   "dep": "16:30",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "17:24"
+   }
+  },
+  {
+   "dep": "16:40",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "17:34"
+   }
+  },
+  {
+   "dep": "16:50",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "17:44"
+   }
+  },
+  {
+   "dep": "17:10",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "18:04"
+   }
+  },
+  {
+   "dep": "17:20",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "18:14"
+   }
+  },
+  {
+   "dep": "17:30",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "18:24"
+   }
+  },
+  {
+   "dep": "17:50",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "18:44"
+   }
+  },
+  {
+   "dep": "18:00",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "18:54"
+   }
+  },
+  {
+   "dep": "18:10",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "19:04"
+   }
+  },
+  {
+   "dep": "18:20",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "19:14"
+   }
+  },
+  {
+   "dep": "18:30",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "19:24"
+   }
+  },
+  {
+   "dep": "18:40",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "19:34"
+   }
+  },
+  {
+   "dep": "18:50",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "19:44"
+   }
+  },
+  {
+   "dep": "19:00",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "19:54"
+   }
+  },
+  {
+   "dep": "19:10",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "20:04"
+   }
+  },
+  {
+   "dep": "19:20",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "20:14"
+   }
+  },
+  {
+   "dep": "19:30",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "20:24"
+   }
+  },
+  {
+   "dep": "19:35",
+   "from": "NGSA",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "20:29"
+   }
+  },
+  {
+   "dep": "19:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "20:37"
+   }
+  },
+  {
+   "dep": "19:50",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "20:44"
+   }
+  },
+  {
+   "dep": "19:58",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "20:52"
+   }
+  },
+  {
+   "dep": "20:06",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "21:00"
+   }
+  },
+  {
+   "dep": "20:14",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "21:08"
+   }
+  },
+  {
+   "dep": "20:22",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "21:16"
+   }
+  },
+  {
+   "dep": "20:30",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "21:24"
+   }
+  },
+  {
+   "dep": "20:40",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "21:34"
+   }
+  },
+  {
+   "dep": "20:50",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "21:44"
+   }
+  },
+  {
+   "dep": "21:00",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "21:54"
+   }
+  },
+  {
+   "dep": "21:10",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "22:04"
+   }
+  },
+  {
+   "dep": "21:20",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "22:14"
+   }
+  },
+  {
+   "dep": "21:30",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "22:24"
+   }
+  },
+  {
+   "dep": "21:40",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "22:34"
+   }
+  },
+  {
+   "dep": "21:50",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "22:44"
+   }
+  },
+  {
+   "dep": "22:00",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "22:54"
+   }
+  },
+  {
+   "dep": "22:11",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "23:12"
+   }
+  },
+  {
+   "dep": "22:26",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "23:27"
+   }
+  },
+  {
+   "dep": "22:41",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "23:42"
+   }
+  },
+  {
+   "dep": "22:56",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "23:57"
+   }
+  },
+  {
+   "dep": "23:06",
+   "from": "BIET",
+   "to": "APTS",
+   "pf": "2",
+   "arrive": {
+    "APTS": "24:02"
+   }
+  }
+ ]
+}
