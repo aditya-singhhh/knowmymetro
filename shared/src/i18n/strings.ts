@@ -4,6 +4,14 @@ export type Lang = (typeof LANGS)[number][0];
 export const LOCALE: Record<Lang, string> = {"en":"en-IN","kn":"kn-IN","hi":"hi-IN","ta":"ta-IN","te":"te-IN"};
 
 export const en = {
+ "fg_title": "Following your metro ride",
+ "fg_body": "Tap to open. Stops by itself when you leave the metro.",
+ "train_at": "Train at {s}",
+ "train_next": "Train heading to {s}",
+ "train_starts": "Starts from {s} at {t}",
+ "reaches": "Reaches {s} at {t} · {n} stops away",
+ "reaches_now": "Reaches {s} at {t}",
+ "src_rider": "Rider report · {n} min ago",
  "live_on": "I'm on this train",
  "live_end": "End",
  "on_time": "On time",
@@ -221,6 +229,14 @@ export const en = {
 export type StringKey = keyof typeof en;
 
 export const kn: Partial<Record<StringKey, string>> = {
+ "fg_title": "ನಿಮ್ಮ ಮೆಟ್ರೋ ಪ್ರಯಾಣವನ್ನು ಅನುಸರಿಸುತ್ತಿದೆ",
+ "fg_body": "ತೆರೆಯಲು ಒತ್ತಿ. ಮೆಟ್ರೋ ಬಿಟ್ಟಾಗ ತಾನಾಗಿ ನಿಲ್ಲುತ್ತದೆ.",
+ "train_at": "ರೈಲು {s} ನಲ್ಲಿದೆ",
+ "train_next": "ರೈಲು {s} ಕಡೆ ಬರುತ್ತಿದೆ",
+ "train_starts": "{s} ನಿಂದ {t} ಕ್ಕೆ ಹೊರಡುತ್ತದೆ",
+ "reaches": "{s} ಗೆ {t} ಕ್ಕೆ ತಲುಪುತ್ತದೆ · {n} ನಿಲ್ದಾಣ ದೂರ",
+ "reaches_now": "{s} ಗೆ {t} ಕ್ಕೆ ತಲುಪುತ್ತದೆ",
+ "src_rider": "ಪ್ರಯಾಣಿಕರ ವರದಿ · {n} ನಿಮಿಷ ಹಿಂದೆ",
  "live_on": "ನಾನು ಈ ರೈಲಿನಲ್ಲಿದ್ದೇನೆ",
  "live_end": "ಮುಗಿಸಿ",
  "on_time": "ಸಮಯಕ್ಕೆ ಸರಿಯಾಗಿ",
@@ -437,6 +453,14 @@ export const kn: Partial<Record<StringKey, string>> = {
 };
 
 export const hi: Partial<Record<StringKey, string>> = {
+ "fg_title": "आपकी मेट्रो यात्रा फ़ॉलो हो रही है",
+ "fg_body": "खोलने के लिए दबाएँ। मेट्रो से निकलने पर अपने आप बंद।",
+ "train_at": "मेट्रो {s} पर है",
+ "train_next": "मेट्रो {s} की ओर जा रही है",
+ "train_starts": "{s} से {t} पर चलेगी",
+ "reaches": "{s} पर {t} बजे · {n} स्टेशन दूर",
+ "reaches_now": "{s} पर {t} बजे पहुँचेगी",
+ "src_rider": "यात्री रिपोर्ट · {n} मिनट पहले",
  "live_on": "मैं इस मेट्रो में हूँ",
  "live_end": "बंद करें",
  "on_time": "समय पर",
@@ -653,6 +677,14 @@ export const hi: Partial<Record<StringKey, string>> = {
 };
 
 export const ta: Partial<Record<StringKey, string>> = {
+ "fg_title": "உங்கள் மெட்ரோ பயணம் பின்தொடரப்படுகிறது",
+ "fg_body": "திறக்க தட்டவும். மெட்ரோவை விட்டதும் தானாக நிற்கும்.",
+ "train_at": "ரயில் {s} இல் உள்ளது",
+ "train_next": "ரயில் {s} நோக்கி செல்கிறது",
+ "train_starts": "{s} இலிருந்து {t} க்கு புறப்படும்",
+ "reaches": "{s} ஐ {t} க்கு அடையும் · {n} நிலையங்கள் தொலைவில்",
+ "reaches_now": "{s} ஐ {t} க்கு அடையும்",
+ "src_rider": "பயணி அறிக்கை · {n} நிமி முன்",
  "live_on": "நான் இந்த ரயிலில் இருக்கிறேன்",
  "live_end": "முடி",
  "on_time": "சரியான நேரம்",
@@ -869,6 +901,14 @@ export const ta: Partial<Record<StringKey, string>> = {
 };
 
 export const te: Partial<Record<StringKey, string>> = {
+ "fg_title": "మీ మెట్రో ప్రయాణాన్ని అనుసరిస్తోంది",
+ "fg_body": "తెరవడానికి నొక్కండి. మెట్రో దిగగానే ఆటోమేటిక్‌గా ఆగుతుంది.",
+ "train_at": "రైలు {s} వద్ద ఉంది",
+ "train_next": "రైలు {s} వైపు వెళ్తోంది",
+ "train_starts": "{s} నుండి {t} కి బయలుదేరుతుంది",
+ "reaches": "{s} కి {t} కి చేరుతుంది · {n} స్టేషన్ల దూరం",
+ "reaches_now": "{s} కి {t} కి చేరుతుంది",
+ "src_rider": "ప్రయాణికుల నివేదిక · {n} ని క్రితం",
  "live_on": "నేను ఈ రైలులో ఉన్నాను",
  "live_end": "ముగించు",
  "on_time": "సమయానికి",

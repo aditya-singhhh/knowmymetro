@@ -5,6 +5,8 @@ import { departuresAt, fmt, lineOrigins, linesOf, secondsNow, serviceFor, statio
 import { track } from '@/core/analytics';
 import { useApp, useNow } from '@/core/app-state';
 import { dayFromToday } from '@/core/days';
+import { tripFromDeparture } from '@/core/departure';
+import { putTrip } from '@/core/trip-store';
 import { Card, SeatBadge, SectionHeader, Screen, T, Tap } from '@/ui/components';
 import { space, type, useTheme } from '@/ui/theme';
 
@@ -25,6 +27,8 @@ export default function StationDetail() {
   let groups = departuresAt(tt, code, serviceFor(tt, now) ?? 'weekday', secondsNow(now), 5);
   let tomorrow = false;
   if (!groups.some((g) => g.rows.length)) { tomorrow = true; groups = departuresAt(tt, code, serviceFor(tt, dayFromToday(1)) ?? 'weekday', 0, 5); }
+  const svc = serviceFor(tt, tomorrow ? dayFromToday(1) : now);
+  const work = svc === 'weekday' || svc === 'monday';
   const s0 = tt.stations[code];
 
   return (
@@ -60,7 +64,8 @@ export default function StationDetail() {
               {g.rows.map((r, i) => {
                 const wait = r.dep - secondsNow(now);
                 return (
-                  <View key={i} style={[s.dep, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}>
+                  <Tap key={i} onPress={() => router.push({ pathname: '/(tabs)/(stations)/trip', params: { id: putTrip(tripFromDeparture(tt, r, work), tomorrow ? 1 : 0) } })}
+                    style={[s.dep, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}>
                     <View style={[s.bar, { backgroundColor: th.line(r.line) }]} />
                     <View style={{ flex: 1, gap: 3 }}>
                       <T v="headline" numberOfLines={1}>{stationName(tt, r.terminus, lang)}</T>
@@ -71,7 +76,7 @@ export default function StationDetail() {
                       <T v="title" style={type.time}>{fmt(r.dep)}</T>
                       {!tomorrow && wait < 3600 ? <T v="caption" color={c.tint}>{t('in_x', { x: `${Math.max(0, Math.round(wait / 60))} ${t('min')}` })}</T> : null}
                     </View>
-                  </View>
+                  </Tap>
                 );
               })}
             </View>

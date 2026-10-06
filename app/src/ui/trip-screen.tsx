@@ -6,7 +6,7 @@ import { track } from '@/core/analytics';
 import { useApp, useNow } from '@/core/app-state';
 import { dayFromToday } from '@/core/days';
 import { getTrainDelay, submitCrowdReport } from '@/core/firebase';
-import { startLive } from '@/core/live';
+import { rideTrain, unwatch, watchTrain } from '@/core/live';
 import { getTrip } from '@/core/trip-store';
 import { Button, Card, Notice, Screen, T, Tap } from './components';
 import { DelayPill, LiveCard, useLive } from './live-card';
@@ -35,55 +35,50 @@ export function TripScreen() {
   if (!trip) return <Screen><Notice text={t('err_net')} /></Screen>;
   const { option, day } = trip;
   const first = option.legs[0], last = option.legs[option.legs.length - 1];
-  const left = option.dep - secondsNow(now);
   const nowS = secondsNow(now);
+  const left = option.dep - nowS;
   const ridden = day === 0 && nowS > first.dep + 60;
-  const isLive = live?.id === id;
-  const canLive = day === 0 && !isLive && nowS > option.dep - 20 * 60 && nowS < option.arr;
-  const missed = day === 0 && !isLive && nowS > option.dep + 60 && nowS < option.arr;
-  const goLive = async () => {
-    setLiveMsg(null);
-    const r = await startLive(tt, id, option, dayFromToday(0));
-    if (r === 'location') setLiveMsg(t('loc_needed'));
-  };
   const when = day > 0
     ? dayFromToday(day).toLocaleDateString(locale, { weekday: 'long' })
     : left > 0 ? t('in_x', { x: `${Math.round(left / 60)} ${t('min')}` }) : t('leave_now');
+  const isLive = live?.id === id;
+  const trackable = day === 0 && nowS < option.arr + 60;
+  // opening a train today shows where it is right away; leaving the screen stops watching (not riding)
+  useEffect(() => {
+    if (trip && trackable) watchTrain(tt, id, trip.option, dayFromToday(0));
+    return () => unwatch(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+  const ride = async () => {
+    setLiveMsg(null);
+    const r = await rideTrain(tt, id, option, dayFromToday(0));
+    if (r === 'location') setLiveMsg(t('loc_needed'));
+  };
+  const nextTrain = () => router.navigate({ pathname: '/(tabs)/(plan)', params: { from: first.from, to: last.to, at: String(Date.now()) } });
 
   return (
     <>
       <Stack.Screen options={{ title: `${stationName(tt, first.from, lang)} – ${stationName(tt, last.to, lang)}`, headerLargeTitle: false }} />
       <Screen>
-        {isLive && live ? <LiveCard live={live} /> : (
-          <Card style={{ gap: space.m }}>
-            <View style={s.summary}>
-              <View>
-                <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('board_at', { s: stationName(tt, first.from, lang) })}</T>
-                <T v="clock" style={{ fontSize: 44 }}>{fmt(option.dep)}</T>
-                <T v="sub" color={c.tint} style={{ fontWeight: '700' }}>{when}</T>
-              </View>
-              <View style={{ alignItems: 'flex-end', gap: space.s }}>
-                {rider ? <DelayPill delay={rider.delay} rider /> : null}
-                <View style={{ alignItems: 'flex-end' }}>
-                  <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('reach')}</T>
-                  <T v="title" style={[type.time, { fontSize: 24 }]}>{fmt(option.arr)}</T>
-                </View>
+        {isLive && live ? <LiveCard live={live} onRide={ride} rideMsg={liveMsg} onMissed={nextTrain} /> : (
+          <Card style={s.summary}>
+            <View>
+              <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('board_at', { s: stationName(tt, first.from, lang) })}</T>
+              <T v="clock" style={{ fontSize: 44 }}>{fmt(option.dep)}</T>
+              <T v="sub" color={c.tint} style={{ fontWeight: '700' }}>{when}</T>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: space.s }}>
+              {rider ? <DelayPill delay={rider.delay} rider /> : null}
+              <View style={{ alignItems: 'flex-end' }}>
+                <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('reach')}</T>
+                <T v="title" style={[type.time, { fontSize: 24 }]}>{fmt(option.arr)}</T>
               </View>
             </View>
-            {canLive ? (
-              <View style={{ gap: space.s }}>
-                <Button label={t('live_on')} onPress={goLive} />
-                <T v="caption" color={c.ink2} style={{ fontWeight: '400', textAlign: 'center' }}>{liveMsg ?? t('live_hint')}</T>
-              </View>
-            ) : null}
-            {missed ? (
-              <Button kind="plain" label={t('missed')} onPress={() => router.navigate({ pathname: '/(tabs)/(plan)', params: { from: first.from, to: last.to, at: String(Date.now()) } })} />
-            ) : null}
           </Card>
         )}
         <TripView option={option} />
-        {!isLive ? <ShareButton option={option} /> : null}
-        {ridden && !isLive ? <CrowdReport origin={first.origin} board={first.from} start={first.start} dep={first.dep} /> : null}
+        {live?.mode !== 'ride' || !isLive ? <ShareButton option={option} /> : null}
+        {ridden && !(isLive && live?.mode === 'ride') ? <CrowdReport origin={first.origin} board={first.from} start={first.start} dep={first.dep} /> : null}
       </Screen>
     </>
   );

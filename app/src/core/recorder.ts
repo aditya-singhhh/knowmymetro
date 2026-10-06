@@ -19,11 +19,33 @@ import { File, Paths, Directory } from 'expo-file-system';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Location from 'expo-location';
 import { Accelerometer, Barometer, DeviceMotion } from 'expo-sensors';
+import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
-import type { Timetable } from '@kmm/shared';
+import { translate, type Lang, type Timetable } from '@kmm/shared';
 import { getCells, type Cell } from '../../modules/cell-info';
 import { uploadRecording } from './firebase';
 import { metresFromLine, MotionTracker, type TrainState } from './motion';
+import { load } from './storage';
+
+/*
+ * Background capture. Android pauses an app's timers when it isn't on screen, so:
+ *  - GPS runs as a location "foreground service" (a notification shows while recording). That keeps
+ *    the app alive with the screen off, and needs only the normal "while using the app" permission.
+ *  - the once-a-second work (motion summary, towers, saving, auto-stop) is driven by incoming
+ *    readings (GPS batches and motion events), not only by a timer.
+ */
+const GPS_TASK = 'kmm-trip-gps';
+let fixHandler: ((p: Location.LocationObject) => void) | null = null;
+let heartbeat: (() => void) | null = null;
+if (Platform.OS === 'android') {
+  try {
+    TaskManager.defineTask<{ locations?: Location.LocationObject[] }>(GPS_TASK, async ({ data, error }) => {
+      if (error || !data?.locations) return;
+      for (const loc of data.locations) fixHandler?.(loc);
+      heartbeat?.();
+    });
+  } catch { /* task manager not available */ }
+}
 
 export type Sample =
   | { t: number; k: 'gps'; lat: number; lon: number; acc: number | null; spd: number | null; alt: number | null }
@@ -111,22 +133,37 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
   await activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => undefined);
 
   // GPS
-  const gps = await Location.watchPositionAsync(
-    { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 2000, distanceInterval: 0 },
-    (p) => {
-      push({ t: p.timestamp, k: 'gps', lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy ?? null, spd: p.coords.speed ?? null, alt: p.coords.altitude ?? null });
-      stats.gpsFixes++; stats.lastAccuracy = p.coords.accuracy ?? null; stats.lastFix = { lat: p.coords.latitude, lon: p.coords.longitude };
-      if (p.coords.speed != null && p.coords.speed >= 0 && (p.coords.accuracy ?? 999) < 50) {
-        stats.kmh = Math.round(p.coords.speed * 3.6); stats.kmhFrom = 'gps'; lastGpsSpeedAt = Date.now();
-      }
-      if ((p.coords.accuracy ?? 999) < 150) {
-        stats.fromLine = Math.round(metresFromLine(lines, tt.stations, p.coords.latitude, p.coords.longitude));
-        if (stats.fromLine < NEAR_LINE_M) { seenLine = true; onLineAt = Date.now(); }
-      }
-      emit();
-    },
-  );
-  stops.push(() => gps.remove());
+  fixHandler = (p) => {
+    push({ t: p.timestamp, k: 'gps', lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy ?? null, spd: p.coords.speed ?? null, alt: p.coords.altitude ?? null });
+    stats.gpsFixes++; stats.lastAccuracy = p.coords.accuracy ?? null; stats.lastFix = { lat: p.coords.latitude, lon: p.coords.longitude };
+    if (p.coords.speed != null && p.coords.speed >= 0 && (p.coords.accuracy ?? 999) < 50) {
+      stats.kmh = Math.round(p.coords.speed * 3.6); stats.kmhFrom = 'gps'; lastGpsSpeedAt = Date.now();
+    }
+    if ((p.coords.accuracy ?? 999) < 150) {
+      stats.fromLine = Math.round(metresFromLine(lines, tt.stations, p.coords.latitude, p.coords.longitude));
+      if (stats.fromLine < NEAR_LINE_M) { seenLine = true; onLineAt = Date.now(); }
+    }
+    emit();
+  };
+  let background = false;
+  if (Platform.OS === 'android') {
+    try {
+      const lang = load<Lang>('lang', 'en');
+      await Location.startLocationUpdatesAsync(GPS_TASK, {
+        accuracy: Location.Accuracy.BestForNavigation, timeInterval: 2000, distanceInterval: 0,
+        foregroundService: { notificationTitle: translate(lang, 'fg_title'), notificationBody: translate(lang, 'fg_body'), notificationColor: '#7B2268', killServiceOnDestroy: true },
+      });
+      background = true;
+      stops.push(() => { Location.stopLocationUpdatesAsync(GPS_TASK).catch(() => undefined); });
+    } catch { /* fall back to on-screen only */ }
+  }
+  if (!background) {
+    const gps = await Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 2000, distanceInterval: 0 }, (p) => fixHandler?.(p));
+    stops.push(() => gps.remove());
+  }
+  stops.push(() => { fixHandler = null; heartbeat = null; });
+  // with background capture the screen may turn off as usual (saves battery)
+  if (background) deactivateKeepAwake(KEEP_AWAKE_TAG);
 
   // Towers (Android)
   const pollCells = async () => {
@@ -137,8 +174,7 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
     stats.towers = towerIds.size;
   };
   pollCells();
-  const cellTimer = setInterval(pollCells, 4000);
-  stops.push(() => clearInterval(cellTimer));
+  let lastCells = Date.now();
 
   // Motion: 10 readings a second, summarised once a second (see motion.ts)
   const tracker = new MotionTracker();
@@ -154,6 +190,7 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
         t: Date.now(), ax: lin.x, ay: lin.y, az: lin.z, gx: inc.x - lin.x, gy: inc.y - lin.y, gz: inc.z - lin.z,
         rot: rr ? Math.sqrt(rr.alpha * rr.alpha + rr.beta * rr.beta + rr.gamma * rr.gamma) : 0,
       });
+      heartbeat?.();
     });
     stops.push(() => dm.remove());
   }
@@ -161,11 +198,16 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
   let buf: number[] = [];
   if (!useDeviceMotion) {
     Accelerometer.setUpdateInterval(100);
-    const acc = Accelerometer.addListener(({ x, y, z }) => { buf.push(Math.sqrt(x * x + y * y + z * z)); });
+    const acc = Accelerometer.addListener(({ x, y, z }) => { buf.push(Math.sqrt(x * x + y * y + z * z)); heartbeat?.(); });
     stops.push(() => acc.remove());
   }
-  const motTimer = setInterval(() => {
+  let lastBeat = Date.now(), lastSave = Date.now();
+  heartbeat = () => {
     const now = Date.now();
+    if (now - lastBeat < 1000) return;
+    lastBeat = now;
+    if (now - lastCells >= 4000) { lastCells = now; pollCells(); }
+    if (now - lastSave >= 60000 && current) { lastSave = now; savePending(current); }
     if (useDeviceMotion) {
       const sec = tracker.second(now);
       if (sec) {
@@ -187,12 +229,10 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
     stats.seconds = Math.round((now - (current?.startedAt ?? now)) / 1000);
     emit();
     checkAutoStop(now);
-  }, 1000);
-  stops.push(() => clearInterval(motTimer));
-
-  // Save to the phone every minute (a killed app loses at most a minute)
-  const saveTimer = setInterval(() => { if (current) savePending(current); }, 60000);
-  stops.push(() => clearInterval(saveTimer));
+  };
+  // also on a timer, for when the phone lies perfectly still and nothing else arrives
+  const beatTimer = setInterval(() => heartbeat?.(), 1000);
+  stops.push(() => clearInterval(beatTimer));
 
   // Air pressure, if available
   if (await Barometer.isAvailableAsync().catch(() => false)) {

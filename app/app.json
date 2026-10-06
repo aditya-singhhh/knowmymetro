@@ -38,7 +38,7 @@
         "ACCESS_FINE_LOCATION"
       ],
       "predictiveBackGestureEnabled": true,
-      "versionCode": 3
+      "versionCode": 4
     },
     "web": {
       "output": "static",
@@ -63,7 +63,9 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "KnowMyMetro uses your location only to find the metro station nearest to you."
+          "locationWhenInUsePermission": "KnowMyMetro uses your location to find the station nearest to you and, when you ask it to, to follow your train.",
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false
         }
       ],
       "@react-native-firebase/app",

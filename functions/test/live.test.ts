@@ -109,3 +109,31 @@ test('standing at the boarding station is not mistaken for the next stop', () =>
   const st = lt.status(stops[1].arr + 40);
   assert.ok(Math.abs(st.delay - 30) < 10, `delay ${st.delay}`);
 });
+
+test('watching a train before it reaches you: where it is and when it arrives', () => {
+  const o = trip();
+  const lt = new LiveTracker(tt, service, o.legs);
+  const L = lt.legs[0];
+  const st = lt.status(L.stops[0].dep - 150);           // 2.5 min before it reaches Yeshwantpur
+  assert.equal(st.phase, 'before');
+  assert.ok(st.train, 'train position');
+  assert.ok(st.train!.stopsAway >= 1 && st.train!.stopsAway <= 3, `stops away ${st.train!.stopsAway}`);
+  assert.ok(Math.abs(st.train!.reaches - L.stops[0].arr) < 2);
+});
+
+test('a rider report shifts the times; our own GPS wins over it', () => {
+  const o = trip();
+  const lt = new LiveTracker(tt, service, o.legs);
+  const L = lt.legs[0];
+  lt.external(240, 30, L.stops[0].dep - 300);
+  let st = lt.status(L.stops[0].dep - 300);
+  assert.equal(st.source, 'rider');
+  assert.equal(st.delay, 240);
+  assert.ok(Math.abs(st.train!.reaches - (L.stops[0].arr + 240)) < 2);
+  // now our own GPS on the train (on time) — rider report must not override it
+  const A = tt.stations[L.stops[1].stn];
+  lt.fix(L.stops[1].arr + 5, A.lat, A.lon, 10);
+  lt.external(240, 0, L.stops[1].arr + 20);
+  st = lt.status(L.stops[1].arr + 20);
+  assert.notEqual(st.source, 'rider');
+});

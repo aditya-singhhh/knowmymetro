@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { fmt, secondsNow, stationName, type LiveStatus } from '@kmm/shared';
 import { useApp } from '@/core/app-state';
 import { currentLive, onLive, stopLive, type LiveTrip } from '@/core/live';
-import { Card, T, Tap } from './components';
+import { Button, Card, T, Tap } from './components';
 import { space, type, useTheme } from './theme';
 import { coachWords } from './trip-view';
 
@@ -26,7 +26,7 @@ export function DelayPill({ delay, rider }: { delay: number; rider?: boolean }) 
   return <View style={[s.pill, { backgroundColor: tone.bg }]}><T v="caption" color={tone.fg} style={{ fontWeight: '700' }}>{text}</T></View>;
 }
 
-export function LiveCard({ live }: { live: LiveTrip }) {
+export function LiveCard({ live, onRide, rideMsg, onMissed }: { live: LiveTrip; onRide?: () => void; rideMsg?: string | null; onMissed?: () => void }) {
   const { t, tt, lang } = useApp();
   const th = useTheme();
   const { c } = th;
@@ -41,15 +41,26 @@ export function LiveCard({ live }: { live: LiveTrip }) {
   const where = (l: typeof leg) => [l.platform ? t('platform', { p: l.platform }) : null, t('towards_big', { s: nm(plan?.terminus ?? l.terminus) })].filter(Boolean).join(' · ');
   const change = live.option.changes[st.leg];
 
-  let big = '', small = '';
+  let big = '', small = '', small2 = '';
+  const tr = st.train;
+  // waiting for a train: where it is now and when it reaches you
+  const trainLines = () => {
+    if (!tr) return;
+    big = tr.startsAt != null ? t('train_starts', { s: nm(tr.at ?? leg.origin), t: fmt(tr.startsAt) })
+      : tr.at ? t('train_at', { s: nm(tr.at) }) : t('train_next', { s: nm(tr.next ?? leg.from) });
+    small = tr.stopsAway <= 0 ? t('reaches_now', { s: nm(leg.from), t: fmt(tr.reaches) }) : t('reaches', { s: nm(leg.from), t: fmt(tr.reaches), n: tr.stopsAway });
+    small2 = where(leg);
+  };
   switch (st.phase) {
     case 'before':
       big = st.action && st.action.inSec > 45 ? t('board_in', { n: mins(st.action.inSec) }) : t('board_now');
       small = where(leg);
+      trainLines();
       break;
     case 'changing':
       big = t('change_now', { line: lineName(leg.line) });
       small = `${where(leg)}${st.action ? ` · ${fmt(now + st.action.inSec)}` : ''}`;
+      if (tr) { const b = big; trainLines(); small2 = `${b} · ${small2}`; }
       break;
     case 'riding':
       big = st.next && st.next !== st.prev ? t('next_stn', { s: nm(st.next) }) : t('at_stn', { s: nm(st.prev ?? leg.from) });
@@ -64,7 +75,9 @@ export function LiveCard({ live }: { live: LiveTrip }) {
       small = nm(legs[legs.length - 1].to);
       break;
   }
-  const src = st.source === 'gps' ? t('src_gps') : st.source === 'motion' ? t('src_motion') : t('src_tt');
+  const src = st.source === 'gps' ? t('src_gps') : st.source === 'motion' ? t('src_motion')
+    : st.source === 'rider' ? t('src_rider', { n: Math.max(0, Math.round((st.age ?? 0) / 60)) }) : t('src_tt');
+  const watching = live.mode === 'watch';
 
   // progress through this ride: one dot per station
   const stops = plan?.stops ?? [];
@@ -83,6 +96,7 @@ export function LiveCard({ live }: { live: LiveTrip }) {
       <View style={{ gap: 4 }}>
         <T v="title" style={{ fontSize: 24 }}>{big}</T>
         {small ? <T v="sub" color={c.ink2}>{small}</T> : null}
+        {small2 ? <T v="sub" color={c.ink2}>{small2}</T> : null}
         {st.missed ? <T v="sub" color={c.bad} style={{ fontWeight: '600' }}>{t('missed_conn', { a: fmt(st.missed.planned), s: nm(st.missed.at), b: st.missed.next != null ? fmt(st.missed.next) : '—' })}</T> : null}
         {st.switched ? <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('switched')}</T> : null}
       </View>
@@ -109,8 +123,16 @@ export function LiveCard({ live }: { live: LiveTrip }) {
         {st.leg + 1 < legs.length && st.phase !== 'changing' ? (
           <T v="caption" color={c.ink2} style={{ fontWeight: '400', marginRight: space.m }} numberOfLines={1}>{t('then_line', { line: lineName(legs[st.leg + 1].line), s: nm(legs[st.leg + 1].to) })}</T>
         ) : null}
-        <Tap onPress={() => stopLive('user')} hitSlop={10}><T v="sub" color={c.tint} style={{ fontWeight: '600' }}>{t('live_end')}</T></Tap>
+        {!watching ? <Tap onPress={() => stopLive('user')} hitSlop={10}><T v="sub" color={c.tint} style={{ fontWeight: '600' }}>{t('live_end')}</T></Tap> : null}
       </View>
+
+      {watching && st.phase !== 'arrived' ? (
+        <View style={{ gap: space.s }}>
+          {onRide ? <Button label={t('live_on')} onPress={onRide} /> : null}
+          {rideMsg ? <T v="caption" color={c.ink2} style={{ fontWeight: '400', textAlign: 'center' }}>{rideMsg}</T> : null}
+          {onMissed && st.leg === 0 && st.phase === 'riding' ? <Button kind="plain" label={t('missed')} onPress={onMissed} /> : null}
+        </View>
+      ) : null}
     </Card>
   );
 }

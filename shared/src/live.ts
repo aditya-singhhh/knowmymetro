@@ -22,7 +22,7 @@ export interface LiveStatus {
   leg: number;
   /** delay in seconds (+ late, - early), and where it came from */
   delay: number;
-  source: 'gps' | 'motion' | 'timetable';
+  source: 'gps' | 'motion' | 'rider' | 'timetable';
   /** seconds since the last real reading (gps or motion) */
   age: number | null;
   /** riding: last station passed and next one, with how far between them (0..1) */
@@ -41,6 +41,8 @@ export interface LiveStatus {
   missed: { at: string; planned: number; next: number | null } | null;
   /** last GPS fix was far from the line */
   offLine: boolean;
+  /** where the train of the current ride is, while you wait for it */
+  train: { at: string | null; next: string | null; startsAt: number | null; stopsAway: number; reaches: number } | null;
 }
 
 const R = 6371000;
@@ -159,7 +161,13 @@ export class LiveTracker {
       L.stops.forEach((st, k) => { if (km >= st.km - 0.15) passed = k; });
       this.lastStation = passed;
       let d = delayAt(L.stops, km, t);
-      if (d == null) { this.lastReading = t; return; }
+      if (d == null) {
+        // standing at a station within its timetable window: the delay must fit that window
+        const st = L.stops.reduce((a, b) => (Math.abs(b.km - km) < Math.abs(a.km - km) ? b : a));
+        this.delay = Math.min(Math.max(this.delay, t - st.dep), t - st.arr);
+        this.source = 'gps'; this.lastReading = t;
+        return;
+      }
       if (Math.abs(d) > SWITCH_DELAY && km > 0.3 && km < end - 0.3) {
         const better = this.otherTrain(li, km, t);
         if (better) { d = better.delay; }
@@ -188,6 +196,30 @@ export class LiveTracker {
     this.lastStation = best.k;
     this.boardedLeg = Math.max(this.boardedLeg, this.onLeg);
     this.update(t - L.stops[best.k].arr, 'motion', t);
+  }
+
+  /** A delay another rider on this train measured `age` seconds ago; used when we have nothing fresher. */
+  external(delay: number, age: number, t: number) {
+    if (this.lastReading != null && this.source !== 'rider' && t - this.lastReading < 90) return;
+    this.delay = delay;
+    this.source = 'rider';
+    this.lastReading = t - Math.max(0, age);
+  }
+
+  /** Where the current ride's train is on its whole route (also before it reaches you). */
+  private trainWhere(t: number): LiveStatus['train'] {
+    const L = this.legs[this.onLeg];
+    const p = this.tt.patterns[L.pattern];
+    const b = p.stops.indexOf(L.from);
+    const te = t - this.delay;
+    const at = (k: number) => L.start + L.held + p.arr[k], dep = (k: number) => L.start + L.held + p.dep[k];
+    const reaches = at(b) + this.delay;
+    if (te < dep(0)) return { at: p.stops[0], next: null, startsAt: dep(0) + this.delay, stopsAway: b, reaches };
+    let k = 0;
+    while (k + 1 < p.stops.length && te >= at(k + 1)) k++;
+    const standing = te <= dep(k);
+    return { at: standing ? p.stops[k] : null, next: standing ? null : p.stops[Math.min(k + 1, p.stops.length - 1)], startsAt: null,
+      stopsAway: Math.max(0, b - (standing ? k : k + 1)), reaches };
   }
 
   private update(d: number, src: LiveStatus['source'], t: number) {
@@ -254,13 +286,13 @@ export class LiveTracker {
     }
     const arrival = li === legs.length - 1 ? arrHere : finalLeg.stops[finalLeg.stops.length - 1].arr + (legs.length - 1 === li + 1 ? nextLegDelay : 0);
 
-    const base = { leg: li, delay: Math.round(dd), source: this.source, age: this.lastReading == null ? null : Math.round(t - this.lastReading), switched: this.switched, missed, arrival, offLine: this.offLine };
+    const base = { leg: li, delay: Math.round(dd), source: this.source, age: this.lastReading == null ? null : Math.round(t - this.lastReading), switched: this.switched, missed, arrival, offLine: this.offLine, train: null as LiveStatus['train'] };
 
     if (li === legs.length - 1 && t >= arrHere) {
       return { ...base, phase: 'arrived', prev: last.stn, next: null, frac: 1, etas: [], action: null };
     }
     if (t < first.dep + dd && this.boardedLeg < li) {
-      return { ...base, phase: li === 0 ? 'before' : 'changing', prev: null, next: first.stn, frac: 0, etas: L.stops.map((s) => ({ stn: s.stn, at: s.arr + dd })),
+      return { ...base, train: this.trainWhere(t), phase: li === 0 ? 'before' : 'changing', prev: null, next: first.stn, frac: 0, etas: L.stops.map((s) => ({ stn: s.stn, at: s.arr + dd })),
         action: { kind: li === 0 ? 'board' : 'change', at: first.stn, stopsAway: 0, inSec: Math.round(first.dep + dd - t) } };
     }
     // riding: find the stretch we're on by expected times

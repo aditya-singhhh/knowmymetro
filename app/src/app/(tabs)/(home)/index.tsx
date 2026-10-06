@@ -8,6 +8,7 @@ import { useStationHere } from '@/core/here';
 import { scheduleCommuteReminders } from '@/core/notify';
 import { buildRequest, prefetchCommute, usePlan } from '@/core/planner';
 import { useLive } from '@/ui/live-card';
+import { tripFromDeparture } from '@/core/departure';
 import { putTrip } from '@/core/trip-store';
 import { Button, Card, Chevron, CoachStrip, Notice, SeatBadge, SectionHeader, Screen, Skeleton, T, Tap, TrainChain } from '@/ui/components';
 import { space, type, useTheme } from '@/ui/theme';
@@ -154,6 +155,8 @@ function NextTrains({ code, now }: { code: string; now: Date }) {
     tomorrow = true;
     groups = departuresAt(tt, code, serviceFor(tt, dayFromToday(1)) ?? 'weekday', 0, 2);
   }
+  const svc = serviceFor(tt, tomorrow ? dayFromToday(1) : now);
+  const work = svc === 'weekday' || svc === 'monday';
   return (
     <View style={{ gap: space.m }}>
       <SectionHeader title={t('next_at', { s: stationName(tt, code, lang) })} action={t('see_all')} onAction={() => router.navigate({ pathname: '/(tabs)/(stations)/station/[code]', params: { code } })} />
@@ -168,7 +171,8 @@ function NextTrains({ code, now }: { code: string; now: Date }) {
             {g.rows.map((r, i) => {
               const wait = r.dep - secondsNow(now);
               return (
-                <View key={i} style={[s.dep, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}>
+                <Tap key={i} onPress={() => router.push({ pathname: '/(tabs)/(home)/trip', params: { id: putTrip(tripFromDeparture(tt, r, work), tomorrow ? 1 : 0) } })}
+                  style={[s.dep, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}>
                   <View style={[s.bar, { backgroundColor: th.line(r.line) }]} />
                   <View style={{ flex: 1, gap: 4 }}>
                     <T v="headline" numberOfLines={1}>{stationName(tt, r.terminus, lang)}</T>
@@ -179,7 +183,7 @@ function NextTrains({ code, now }: { code: string; now: Date }) {
                       <><T v="title" style={type.time}>{Math.max(0, Math.round(wait / 60))}</T><T v="caption" color={c.ink2}>{t('min')}</T></>
                     ) : <T v="title" style={type.time}>{fmt(r.dep)}</T>}
                   </View>
-                </View>
+                </Tap>
               );
             })}
           </View>
