@@ -1,0 +1,30 @@
+name: Inspect APK
+# Downloads APKs and checks they are installable: complete zip, signature, version, Android level.
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: 'APK links, space separated'
+        required: true
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check each APK
+        env:
+          URLS: ${{ inputs.urls }}
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          n=0
+          for u in $URLS; do
+            n=$((n+1)); f=app$n.apk
+            curl -sSL -o $f "$u" || echo "::error title=APK $n::download failed"
+            size=$(stat -c %s $f)
+            zipok=$(unzip -tq $f >/dev/null 2>&1 && echo ok || echo BROKEN)
+            badge=$($BT/aapt2 dump badging $f 2>&1 | grep -E "^package:|sdkVersion|targetSdkVersion|native-code" | tr '\n' ' ' | head -c 600)
+            sig=$($BT/apksigner verify --print-certs $f 2>&1 | grep -E "Signer #1 certificate SHA-256|ERROR|WARNING: .*not" | head -3 | tr '\n' ' ')
+            testonly=$($BT/aapt2 dump xmltree --file AndroidManifest.xml $f 2>/dev/null | grep -c testOnly || true)
+            echo "::notice title=APK $n ($size bytes, zip $zipok, testOnly=$testonly)::$badge"
+            echo "::notice title=APK $n signature::$sig"
+          done
