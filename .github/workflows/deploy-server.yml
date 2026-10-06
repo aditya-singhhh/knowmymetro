@@ -24,6 +24,8 @@ jobs:
       - run: npm ci
       - run: npm --prefix functions ci
       - run: npm test
+      # rebuild data/timetable.json from data/timetable/ + observations, so the deployed timetable always matches the source
+      - run: npm --prefix functions run own
       - name: Write service account key
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/sa.json"
       - name: Show deploying account (email only)

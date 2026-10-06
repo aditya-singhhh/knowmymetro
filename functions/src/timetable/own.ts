@@ -67,8 +67,8 @@ export function saveSource(dir: string, s: ReturnType<typeof loadSource>) {
   }
 }
 
-export function compile(dir: string): Timetable {
-  const { meta, patterns, departures } = loadSource(dir);
+export function compile(src: Src): Timetable {
+  const { meta, patterns, departures } = src;
   const { source: _s, ...rest } = meta;
   const index = new Map(patterns.map((p, i) => [p.id, i]));
   const out: Pattern[] = patterns.map((p) => ({
@@ -86,8 +86,7 @@ export function compile(dir: string): Timetable {
   }
   const body = JSON.stringify({ patterns: out, departures: deps });
   const hash = createHash('sha256').update(body).digest('hex').slice(0, 8);
-  const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  return { version: `${day}-${hash}`, generatedAt: new Date().toISOString(), ...rest, patterns: out, departures: deps } as Timetable;
+  return { version: `own-${hash}`, generatedAt: new Date().toISOString(), ...rest, patterns: out, departures: deps } as Timetable;
 }
 
 /* ------------------------------------------------------------------ observations */
@@ -96,6 +95,9 @@ export interface RunObservation {
   type: 'run'; source: string; date: string; service: string; line: string;
   stops: [string, string][];            // [station code, "HH:MM"] in travel order
   pf?: Record<string, string>;          // platforms seen
+  /** true = a normal run whose times can become the running times of every train on this stretch.
+   *  Late-night or delayed runs are kept for reference only. */
+  typical?: boolean;
 }
 /** A station's departure board: trains leaving one station in one direction. */
 export interface BoardObservation {
@@ -132,6 +134,7 @@ function ensurePattern(s: Src, line: string, from: string, to: string, log: stri
 
 /** Running times from an observed run replace those of every pattern on that stretch, same direction. */
 function applyRun(s: Src, o: RunObservation, log: string[]) {
+  if (!o.typical) { log.push(`  run ${o.stops[0][0]} ${o.stops[0][1]} kept for reference only (${o.source})`); return; }
   const obs = new Map(o.stops.map(([stn, t]) => [stn, at(t)]));
   const order = o.stops.map(([stn]) => stn);
   for (const p of s.patterns) {
@@ -150,29 +153,48 @@ function applyRun(s: Src, o: RunObservation, log: string[]) {
   }
 }
 
-/** A departure board: the trains in its time window are exactly these (others in that window are removed). */
-function applyBoard(s: Src, o: BoardObservation, log: string[]) {
+/** Time this train of pattern p passes (or would pass) station stn, using the longest pattern on that stretch for trains that don't reach it. */
+function timeAt(s: Src, p: SrcPattern, t0: number, stn: string): number | null {
+  const k = p.stops.findIndex((x) => x.stn === stn);
+  if (k >= 0) return t0 + off(p.stops[k].dep);
+  const first = p.stops[0].stn, last = p.stops[p.stops.length - 1].stn;
+  const ref = s.patterns.filter((q) => q.line === p.line).map((q) => ({ q, a: q.stops.findIndex((x) => x.stn === first), b: q.stops.findIndex((x) => x.stn === last), c: q.stops.findIndex((x) => x.stn === stn) }))
+    .filter((x) => x.a >= 0 && x.b > x.a && x.c >= 0).sort((x, y) => y.q.stops.length - x.q.stops.length)[0];
+  return ref ? t0 - off(ref.q.stops[ref.a].dep) + off(ref.q.stops[ref.c].dep) : null;
+}
+
+/**
+ * A departure board: the trains in its time window at that station are exactly these (ours in that window are replaced).
+ * Trains that never pass the station (short trips starting or ending elsewhere) can't be seen on this board, but the
+ * feed built them from the same timetable bands as their neighbours, so they get the same correction as the nearest
+ * matched train ("carried"), unless an observation already placed them.
+ */
+function applyBoard(s: Src, o: BoardObservation, log: string[], seen: Set<string>) {
   const dep = (s.departures[o.service] ||= {});
   const dir = dirOf(s.meta, o.line, o.station, o.towards);
-  const times = o.trains.map((t) => at(t.dep));
+  const rows = o.trains.filter((t) => t.from !== '?' && t.to !== '?');
+  const times = rows.map((t) => at(t.dep));
   const lo = Math.min(...times) - 60, hi = Math.max(...times) + 60;
+  const sameDir = (p: SrcPattern) => p.line === o.line && dirOf(s.meta, o.line, p.stops[0].stn, p.stops[p.stops.length - 1].stn) === dir;
+  const passes = (p: SrcPattern) => { const k = p.stops.findIndex((x) => x.stn === o.station); return k >= 0 && k < p.stops.length - 1; };
   // remove what we had in that window, that direction, at that station
-  let removed = 0;
+  const old: number[] = [];
   for (const p of s.patterns) {
-    if (p.line !== o.line) continue;
+    if (!sameDir(p) || !passes(p)) continue;
     const k = p.stops.findIndex((x) => x.stn === o.station);
-    if (k < 0 || k === p.stops.length - 1 || dirOf(s.meta, o.line, p.stops[0].stn, p.stops[p.stops.length - 1].stn) !== dir) continue;
     const list = dep[p.id] ?? [];
-    const keep = list.filter((t) => { const here = at(t) + off(p.stops[k].dep); return here < lo || here > hi; });
-    removed += list.length - keep.length;
+    const keep = list.filter((t) => { const here = at(t) + off(p.stops[k].dep); if (here >= lo && here <= hi) { old.push(here); return false; } return true; });
     if (list.length) dep[p.id] = keep;
   }
   // add what the board shows
-  for (const t of o.trains) {
+  const now: number[] = [];
+  for (const t of rows) {
     const p = ensurePattern(s, o.line, t.from, t.to, log);
     const k = p.stops.findIndex((x) => x.stn === o.station);
     const t0 = at(t.dep) - off(p.stops[k].dep);
     (dep[p.id] ||= []).push(clock(t0));
+    seen.add(`${o.service}|${p.id}|${clock(t0)}`);
+    now.push(at(t.dep));
     if (t.pf) p.stops[k].pf = t.pf;
     for (const [stn, a] of Object.entries(t.arrive ?? {})) {
       const j = p.stops.findIndex((x) => x.stn === stn);
@@ -182,18 +204,54 @@ function applyBoard(s: Src, o: BoardObservation, log: string[]) {
       if (Math.abs(diff) >= 2) log.push(`! ${p.id} ${t.dep}: board says ${stn} ${a}, our running time gives ${clock(ours).slice(0, 5)} (${diff > 0 ? '+' : ''}${diff} min)`);
     }
   }
-  log.push(`~ board ${o.station} ${o.line} towards ${o.towards} ${o.service} ${clock(lo + 60).slice(0, 5)}-${clock(hi - 60).slice(0, 5)}: -${removed} +${o.trains.length} (${o.source})`);
+  // how much each of our old trains moved: pair old and new in order of time, nearest first, within 6 min
+  old.sort((a, b) => a - b); now.sort((a, b) => a - b);
+  const used = new Set<number>(), shifts: [number, number][] = [];
+  for (const a of old) {
+    let best = -1;
+    now.forEach((b, i) => { if (!used.has(i) && Math.abs(b - a) <= 360 && (best < 0 || Math.abs(b - a) < Math.abs(now[best] - a))) best = i; });
+    if (best >= 0) { used.add(best); shifts.push([a, now[best] - a]); }
+  }
+  // carry the correction to trains this board can't see
+  let carried = 0;
+  if (shifts.length) {
+    for (const p of s.patterns) {
+      if (!sameDir(p) || passes(p)) continue;
+      const list = dep[p.id];
+      if (!list?.length) continue;
+      dep[p.id] = list.map((t) => {
+        if (seen.has(`${o.service}|${p.id}|${t}`)) return t;
+        const here = timeAt(s, p, at(t), o.station);
+        if (here == null || here < lo - 300 || here > hi + 300) return t;
+        const [, d] = shifts.reduce((x, y) => (Math.abs(y[0] - here) < Math.abs(x[0] - here) ? y : x));
+        if (!d) return t;
+        carried++;
+        return clock(at(t) + d);
+      });
+    }
+  }
+  const moved = shifts.filter(([, d]) => d).length;
+  log.push(`~ board ${o.station} ${o.line} towards ${o.towards} ${o.service} ${clock(lo + 60).slice(0, 5)}-${clock(hi - 60).slice(0, 5)}: ${old.length} trains -> ${rows.length} (${moved} moved, ${old.length - shifts.length} dropped, ${rows.length - shifts.length} added), ${carried} short trips carried (${o.source})`);
 }
 
-export function applyObservations(dir: string, files: string[]): string[] {
+/**
+ * Build the timetable: the base source plus every observation, applied fresh each time (the source files are never
+ * changed, so the result is reproducible and an observation can be fixed or removed by editing its file).
+ * Order: typical runs (running times), then boards at end stations, then boards at middle stations, each by date.
+ */
+export function build(dir: string): { tt: Timetable; log: string[] } {
   const s = loadSource(dir);
   const log: string[] = [];
-  const obs = files.map((f) => JSON.parse(readFileSync(f, 'utf8')) as Observation);
-  // running times first, then boards (boards place trains using the corrected running times)
+  const obsDir = join(dir, 'observations');
+  const obs = (existsSync(obsDir) ? readdirSync(obsDir).filter((f) => f.endsWith('.json')).sort() : [])
+    .map((f) => JSON.parse(readFileSync(join(obsDir, f), 'utf8')) as Observation);
   for (const o of obs) if (o.type === 'run') applyRun(s, o, log);
-  for (const o of obs) if (o.type === 'board') applyBoard(s, o, log);
-  saveSource(dir, s);
-  return log;
+  const end = (o: BoardObservation) => { const st = lineStations(s.meta, o.line); return o.station === st[0] || o.station === st[st.length - 1] ? 0 : 1; };
+  const boards = obs.filter((o): o is BoardObservation => o.type === 'board').sort((a, b) => end(a) - end(b) || a.date.localeCompare(b.date));
+  const seen = new Set<string>();
+  for (const o of boards) applyBoard(s, o, log, seen);
+  for (const d of Object.values(s.departures)) for (const k of Object.keys(d)) d[k] = [...new Set(d[k])].sort();
+  return { tt: compile(s), log };
 }
 
 /* ------------------------------------------------------------------ helpers */

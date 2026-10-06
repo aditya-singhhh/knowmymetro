@@ -11,7 +11,8 @@
     "test": "tsx --test test/*.test.ts",
     "serve": "npm run build && firebase emulators:start --only functions,firestore,auth,storage",
     "deploy": "firebase deploy --only functions",
-    "timetable": "tsx src/timetable/cli.ts"
+    "timetable": "tsx src/timetable/cli.ts",
+    "own": "tsx src/timetable/own-cli.ts"
   },
   "dependencies": {
     "firebase-admin": "^14.5.0",

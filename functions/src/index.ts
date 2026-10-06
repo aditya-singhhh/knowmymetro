@@ -2,7 +2,7 @@
  * KnowMyMetro Cloud Functions (region asia-south1, Mumbai).
  *
  *   plan               callable, App Check enforced: journey planning (the routing never ships in the app)
- *   syncTimetable      daily: rebuild the timetable from the BMRCL feed, publish if it changed
+ *   syncTimetable      daily: publish our own timetable (data/timetable/ + observations, bundled at deploy) if it changed
  *   crunchCrowd        nightly: rider crowd reports -> seat chance per train
  *   crunchInterchanges nightly: rider change-time reports -> quickest coach per change
  */
@@ -18,7 +18,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PlanRequest, PlanResponse, Timetable } from '@kmm/shared';
 import { DEFAULT_TUNING, plan, type CrowdTable, type InterchangeInfo, type Tuning } from './engine/plan';
-import { buildTimetable, downloadFeed } from './timetable/build';
 
 initializeApp();
 setGlobalOptions({ region: 'asia-south1', maxInstances: 20 });
@@ -89,7 +88,8 @@ export const planTrip = onCall(
 
 /* ------------------------------------------------------------------ timetable sync */
 export const syncTimetable = onSchedule({ schedule: 'every day 03:30', timeZone: 'Asia/Kolkata', memory: '1GiB', timeoutSeconds: 300 }, async () => {
-  const tt = buildTimetable(await downloadFeed());
+  // Our own timetable, compiled from data/timetable/ (base feed + rider observations) by `npm run own` and bundled at deploy.
+  const tt = bundledTimetable();
   const meta = db.doc('timetable/current');
   if ((await meta.get()).get('version') === tt.version) { logger.info(`Timetable unchanged (${tt.version})`); return; }
   const json = JSON.stringify(tt);
