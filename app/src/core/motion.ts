@@ -30,6 +30,8 @@ export interface MotionSecond {
   /** turning, deg/s */
   r: number;
   state: TrainState;
+  /** probably standing at a station (looser than state 'stopped'; for counting stops) */
+  dwell: boolean;
   /** push along the train's forward direction, m/s^2 (+ speeding up, - braking; null until a stop has been seen) */
   along: number | null;
   /** estimated speed from motion, km/h (null when unknown) */
@@ -53,8 +55,16 @@ const scale = (a: V3, k: number): V3 => [a[0] * k, a[1] * k, a[2] * k];
 export const MOTION = {
   handTurn: 20,        // deg/s: turning faster than this = phone in hand
   handShake: 0.8,      // m/s^2: shaking more than this = hand or walking
-  stillShake: 0.06,    // m/s^2: less shake than this (for a few seconds) = standing at a station
+  stillShake: 0.06,    // m/s^2: phone resting and train standing (strict: resets the speed estimate)
   stillSeconds: 4,
+  // "Probably at a station" for counting stops, tuned on real rides with the phone in hand (6 Oct 2026,
+  // checked against door taps and GPS): almost no level push, little turning, moderate shake.
+  // Looser, so it can also fire while cruising smoothly; the live tracker ignores stops that don't line up
+  // with a station's time, so it is used only for counting stations, never for speed.
+  dwellShake: 0.3,     // m/s^2
+  dwellPush: 0.1,      // m/s^2
+  dwellTurn: 12,       // deg/s
+  dwellSeconds: 6,
   push: 0.3,           // m/s^2: steady level push above this = speeding up or braking
   pushSeconds: 3,
   maxKmh: 90,
@@ -94,13 +104,19 @@ export class MotionTracker {
     const dt = this.lastT ? Math.min(3, Math.max(0.2, (t - this.lastT) / 1000)) : 1;
     this.lastT = t;
     this.recent.push({ h: hv, j, r: rot });
-    if (this.recent.length > 8) this.recent.shift();
+    if (this.recent.length > 10) this.recent.shift();
     this.update(hv, j, rot, dt);
 
     return {
       t, a: r3(a), g: r3(g), h: round(h, 3), v: round(v, 3), j: round(j, 3), r: round(rot, 1),
-      state: this.state, along: this.forward ? round(dot(hv, this.forward), 3) : null, kmh: this.speed == null ? null : Math.round(this.speed * 3.6),
+      state: this.state, dwell: this.dwell(), along: this.forward ? round(dot(hv, this.forward), 3) : null, kmh: this.speed == null ? null : Math.round(this.speed * 3.6),
     };
+  }
+
+  private dwell(): boolean {
+    const M = MOTION, w = this.recent.slice(-M.dwellSeconds);
+    if (this.state === 'stopped') return true;
+    return w.length >= M.dwellSeconds && w.every((s) => s.j < M.dwellShake && len(s.h) < M.dwellPush && s.r < M.dwellTurn);
   }
 
   private update(hv: V3, j: number, rot: number, dt: number) {

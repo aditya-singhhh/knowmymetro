@@ -179,6 +179,7 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
   // Motion: 10 readings a second, summarised once a second (see motion.ts)
   const tracker = new MotionTracker();
   let last: TrainState | null = null;
+  let lastDwell = true, lastStopEvt = Date.now(); // you board standing still: that's not a new stop
   const useDeviceMotion = await DeviceMotion.isAvailableAsync().catch(() => false);
   if (useDeviceMotion) {
     DeviceMotion.setUpdateInterval(100);
@@ -212,7 +213,9 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
       const sec = tracker.second(now);
       if (sec) {
         push({ t: now, k: 'dm', a: sec.a, g: sec.g, h: sec.h, v: sec.v, j: sec.j, r: sec.r, s: sec.state, kmh: sec.kmh });
-        if (sec.state === 'stopped' && last && last !== 'stopped' && last !== 'unknown') { push({ t: now, k: 'evt', e: 'train_stopped' }); stats.stops++; }
+        // a station stop: the train came to rest (at most one per 40 s)
+        if (sec.dwell && !lastDwell && now - lastStopEvt > 40000) { push({ t: now, k: 'evt', e: 'train_stopped' }); stats.stops++; lastStopEvt = now; }
+        lastDwell = sec.dwell;
         if (sec.state === 'starting' && last === 'stopped') push({ t: now, k: 'evt', e: 'train_started' });
         last = sec.state;
         stats.train = sec.state;

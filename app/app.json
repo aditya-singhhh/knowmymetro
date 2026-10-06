@@ -2,7 +2,7 @@
   "expo": {
     "name": "KnowMyMetro",
     "slug": "knowmymetro",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "knowmymetro",
@@ -38,7 +38,7 @@
         "ACCESS_FINE_LOCATION"
       ],
       "predictiveBackGestureEnabled": true,
-      "versionCode": 4
+      "versionCode": 5
     },
     "web": {
       "output": "static",
