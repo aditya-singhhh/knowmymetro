@@ -1,13 +1,13 @@
 import { Share, StyleSheet, View } from 'react-native';
 import { fmt, mins, stationName, type PlanOption } from '@kmm/shared';
 import { useApp } from '@/core/app-state';
-import { Button, Card, CoachStrip, SeatBadge, T } from './components';
+import { Button, Card, CoachStrip, SeatBadge, T, Tap } from './components';
 import { space, type, useTheme } from './theme';
 
 const LINE_KEY: Record<string, 'G' | 'P' | 'Y'> = { GREEN: 'G', PURPLE: 'P', YELLOW: 'Y' };
 
 /** Step-by-step view of one trip: board, ride, change, arrive. */
-export function TripView({ option }: { option: PlanOption }) {
+export function TripView({ option, onLeg }: { option: PlanOption; onLeg?: (i: number) => void }) {
   const { tt, lang, t } = useApp();
   const th = useTheme();
   const { c } = th;
@@ -32,6 +32,7 @@ export function TripView({ option }: { option: PlanOption }) {
               <T v="sub" color={c.ink2}>{lineName(l.line)}</T>
               <SeatBadge seat={l.seat} />
               <T v="sub" color={c.ink2}>{t(l.stops === 1 ? 'stops_ride1' : 'stops_ride', { n: l.stops, m: mins(l.arr - l.dep) })}</T>
+              {onLeg ? <Tap onPress={() => onLeg(i)} hitSlop={8} style={{ alignSelf: 'flex-start' }}><T v="sub" color={c.tint} style={{ fontWeight: '600' }}>{t('all_stations')} ›</T></Tap> : null}
               {ch?.kind === 'line' && ch.coaches.length ? (
                 <View style={[s.coachBox, { backgroundColor: c.fill }]}>
                   <CoachStrip coaches={ch.coaches} line={l.line} large />

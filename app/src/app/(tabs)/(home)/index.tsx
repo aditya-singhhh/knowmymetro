@@ -8,7 +8,6 @@ import { useStationHere } from '@/core/here';
 import { scheduleCommuteReminders } from '@/core/notify';
 import { buildRequest, prefetchCommute, usePlan } from '@/core/planner';
 import { useLive } from '@/ui/live-card';
-import { tripFromDeparture } from '@/core/departure';
 import { putTrip } from '@/core/trip-store';
 import { Button, Card, Chevron, CoachStrip, Notice, SeatBadge, SectionHeader, Screen, Skeleton, T, Tap, TrainChain } from '@/ui/components';
 import { space, type, useTheme } from '@/ui/theme';
@@ -155,8 +154,6 @@ function NextTrains({ code, now }: { code: string; now: Date }) {
     tomorrow = true;
     groups = departuresAt(tt, code, serviceFor(tt, dayFromToday(1)) ?? 'weekday', 0, 2);
   }
-  const svc = serviceFor(tt, tomorrow ? dayFromToday(1) : now);
-  const work = svc === 'weekday' || svc === 'monday';
   return (
     <View style={{ gap: space.m }}>
       <SectionHeader title={t('next_at', { s: stationName(tt, code, lang) })} action={t('see_all')} onAction={() => router.navigate({ pathname: '/(tabs)/(stations)/station/[code]', params: { code } })} />
@@ -171,7 +168,7 @@ function NextTrains({ code, now }: { code: string; now: Date }) {
             {g.rows.map((r, i) => {
               const wait = r.dep - secondsNow(now);
               return (
-                <Tap key={i} onPress={() => router.push({ pathname: '/(tabs)/(home)/trip', params: { id: putTrip(tripFromDeparture(tt, r, work), tomorrow ? 1 : 0) } })}
+                <Tap key={i} onPress={() => router.push({ pathname: '/train', params: { p: String(r.pattern), t0: String(r.dep - tt.patterns[r.pattern].dep[r.before]), day: tomorrow ? '1' : '0', board: code } })}
                   style={[s.dep, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}>
                   <View style={[s.bar, { backgroundColor: th.line(r.line) }]} />
                   <View style={{ flex: 1, gap: 4 }}>

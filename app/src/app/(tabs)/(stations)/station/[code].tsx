@@ -5,8 +5,6 @@ import { departuresAt, fmt, lineOrigins, linesOf, secondsNow, serviceFor, statio
 import { track } from '@/core/analytics';
 import { useApp, useNow } from '@/core/app-state';
 import { dayFromToday } from '@/core/days';
-import { tripFromDeparture } from '@/core/departure';
-import { putTrip } from '@/core/trip-store';
 import { Card, SeatBadge, SectionHeader, Screen, T, Tap } from '@/ui/components';
 import { space, type, useTheme } from '@/ui/theme';
 
@@ -27,8 +25,6 @@ export default function StationDetail() {
   let groups = departuresAt(tt, code, serviceFor(tt, now) ?? 'weekday', secondsNow(now), 5);
   let tomorrow = false;
   if (!groups.some((g) => g.rows.length)) { tomorrow = true; groups = departuresAt(tt, code, serviceFor(tt, dayFromToday(1)) ?? 'weekday', 0, 5); }
-  const svc = serviceFor(tt, tomorrow ? dayFromToday(1) : now);
-  const work = svc === 'weekday' || svc === 'monday';
   const s0 = tt.stations[code];
 
   return (
@@ -64,7 +60,7 @@ export default function StationDetail() {
               {g.rows.map((r, i) => {
                 const wait = r.dep - secondsNow(now);
                 return (
-                  <Tap key={i} onPress={() => router.push({ pathname: '/(tabs)/(stations)/trip', params: { id: putTrip(tripFromDeparture(tt, r, work), tomorrow ? 1 : 0) } })}
+                  <Tap key={i} onPress={() => router.push({ pathname: '/train', params: { p: String(r.pattern), t0: String(r.dep - tt.patterns[r.pattern].dep[r.before]), day: tomorrow ? '1' : '0', board: code } })}
                     style={[s.dep, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}>
                     <View style={[s.bar, { backgroundColor: th.line(r.line) }]} />
                     <View style={{ flex: 1, gap: 3 }}>

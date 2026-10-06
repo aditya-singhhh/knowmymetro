@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { fmt, secondsNow, serviceFor, stationName, ymd } from '@kmm/shared';
+import { fmt, legPlan, secondsNow, serviceFor, stationName, ymd } from '@kmm/shared';
 import { track } from '@/core/analytics';
 import { useApp, useNow } from '@/core/app-state';
 import { dayFromToday } from '@/core/days';
@@ -54,13 +54,20 @@ export function TripScreen() {
     const r = await rideTrain(tt, id, option, dayFromToday(0));
     if (r === 'location') setLiveMsg(t('loc_needed'));
   };
+  // running status of one ride's train (all its stations)
+  const openTrain = (i: number) => {
+    const svc = serviceFor(tt, dayFromToday(day));
+    const lp = isLive && live ? live.tracker.legs[i] : svc ? legPlan(tt, svc, option.legs[i]) : null;
+    if (!lp) return;
+    router.push({ pathname: '/train', params: { p: String(lp.pattern), t0: String(lp.start), day: String(day), board: option.legs[i].from, alight: option.legs[i].to } });
+  };
   const nextTrain = () => router.navigate({ pathname: '/(tabs)/(plan)', params: { from: first.from, to: last.to, at: String(Date.now()) } });
 
   return (
     <>
       <Stack.Screen options={{ title: `${stationName(tt, first.from, lang)} – ${stationName(tt, last.to, lang)}`, headerLargeTitle: false }} />
       <Screen>
-        {isLive && live ? <LiveCard live={live} onRide={ride} rideMsg={liveMsg} onMissed={nextTrain} /> : (
+        {isLive && live ? <LiveCard live={live} onRide={ride} rideMsg={liveMsg} onMissed={nextTrain} onStations={openTrain} /> : (
           <Card style={s.summary}>
             <View>
               <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('board_at', { s: stationName(tt, first.from, lang) })}</T>
@@ -76,7 +83,7 @@ export function TripScreen() {
             </View>
           </Card>
         )}
-        <TripView option={option} />
+        <TripView option={option} onLeg={openTrain} />
         {live?.mode !== 'ride' || !isLive ? <ShareButton option={option} /> : null}
         {ridden && !(isLive && live?.mode === 'ride') ? <CrowdReport origin={first.origin} board={first.from} start={first.start} dep={first.dep} /> : null}
       </Screen>

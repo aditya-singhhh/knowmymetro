@@ -165,9 +165,14 @@ export function uploadRecording(rec: { id: string; startedAt: number; endedAt: n
 export const trainKey = (date: string, origin: string, start: number) => `${date}_${origin}_${start}`;
 
 export function shareTrainDelay(d: { date: string; origin: string; start: number; line: string; delay: number; at: number }) {
-  return asUser((uid) => setDoc(doc(getFirestore(), `trainLive/${trainKey(d.date, d.origin, d.start)}`), {
-    line: d.line, delay: Math.round(d.delay), at: Math.round(d.at), uid, updatedAt: serverTimestamp(),
-  }));
+  // latest value (what other riders read) + an append-only log (for delay history and later analysis)
+  return asUser(async (uid) => {
+    const db = getFirestore(), key = trainKey(d.date, d.origin, d.start);
+    const batch = writeBatch(db);
+    batch.set(doc(db, `trainLive/${key}`), { line: d.line, delay: Math.round(d.delay), at: Math.round(d.at), uid, updatedAt: serverTimestamp() });
+    batch.set(doc(db, `trainLive/${key}/log/${uid}_${Math.round(d.at)}`), { delay: Math.round(d.delay), at: Math.round(d.at), uid, updatedAt: serverTimestamp() });
+    await batch.commit();
+  });
 }
 
 const liveCache = new Map<string, { at: number; v: { delay: number; at: number } | null }>();

@@ -4,6 +4,10 @@ export type Lang = (typeof LANGS)[number][0];
 export const LOCALE: Record<Lang, string> = {"en":"en-IN","kn":"kn-IN","hi":"hi-IN","ta":"ta-IN","te":"te-IN"};
 
 export const en = {
+ "arrived_at": "Reached {s}",
+ "you_board": "You board here",
+ "you_alight": "You get off here",
+ "all_stations": "See all stations",
  "fg_title": "Following your metro ride",
  "fg_body": "Tap to open. Stops by itself when you leave the metro.",
  "train_at": "Train at {s}",
@@ -229,6 +233,10 @@ export const en = {
 export type StringKey = keyof typeof en;
 
 export const kn: Partial<Record<StringKey, string>> = {
+ "arrived_at": "{s} ತಲುಪಿದೆ",
+ "you_board": "ನೀವು ಇಲ್ಲಿ ಹತ್ತುತ್ತೀರಿ",
+ "you_alight": "ನೀವು ಇಲ್ಲಿ ಇಳಿಯುತ್ತೀರಿ",
+ "all_stations": "ಎಲ್ಲಾ ನಿಲ್ದಾಣಗಳು",
  "fg_title": "ನಿಮ್ಮ ಮೆಟ್ರೋ ಪ್ರಯಾಣವನ್ನು ಅನುಸರಿಸುತ್ತಿದೆ",
  "fg_body": "ತೆರೆಯಲು ಒತ್ತಿ. ಮೆಟ್ರೋ ಬಿಟ್ಟಾಗ ತಾನಾಗಿ ನಿಲ್ಲುತ್ತದೆ.",
  "train_at": "ರೈಲು {s} ನಲ್ಲಿದೆ",
@@ -453,6 +461,10 @@ export const kn: Partial<Record<StringKey, string>> = {
 };
 
 export const hi: Partial<Record<StringKey, string>> = {
+ "arrived_at": "{s} पहुँच गई",
+ "you_board": "आप यहाँ चढ़ेंगे",
+ "you_alight": "आप यहाँ उतरेंगे",
+ "all_stations": "सभी स्टेशन देखें",
  "fg_title": "आपकी मेट्रो यात्रा फ़ॉलो हो रही है",
  "fg_body": "खोलने के लिए दबाएँ। मेट्रो से निकलने पर अपने आप बंद।",
  "train_at": "मेट्रो {s} पर है",
@@ -677,6 +689,10 @@ export const hi: Partial<Record<StringKey, string>> = {
 };
 
 export const ta: Partial<Record<StringKey, string>> = {
+ "arrived_at": "{s} ஐ அடைந்தது",
+ "you_board": "இங்கே ஏறுவீர்கள்",
+ "you_alight": "இங்கே இறங்குவீர்கள்",
+ "all_stations": "அனைத்து நிலையங்களும்",
  "fg_title": "உங்கள் மெட்ரோ பயணம் பின்தொடரப்படுகிறது",
  "fg_body": "திறக்க தட்டவும். மெட்ரோவை விட்டதும் தானாக நிற்கும்.",
  "train_at": "ரயில் {s} இல் உள்ளது",
@@ -901,6 +917,10 @@ export const ta: Partial<Record<StringKey, string>> = {
 };
 
 export const te: Partial<Record<StringKey, string>> = {
+ "arrived_at": "{s} చేరింది",
+ "you_board": "మీరు ఇక్కడ ఎక్కుతారు",
+ "you_alight": "మీరు ఇక్కడ దిగుతారు",
+ "all_stations": "అన్ని స్టేషన్లు చూడండి",
  "fg_title": "మీ మెట్రో ప్రయాణాన్ని అనుసరిస్తోంది",
  "fg_body": "తెరవడానికి నొక్కండి. మెట్రో దిగగానే ఆటోమేటిక్‌గా ఆగుతుంది.",
  "train_at": "రైలు {s} వద్ద ఉంది",

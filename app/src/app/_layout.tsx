@@ -47,6 +47,7 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
             <Stack.Screen name="settings" options={{ presentation: 'modal', headerShown: true }} />
             <Stack.Screen name="recorder" options={{ headerShown: true, headerBackButtonDisplayMode: 'minimal' }} />
+            <Stack.Screen name="train" options={{ headerShown: true, headerBackButtonDisplayMode: 'minimal' }} />
           </Stack>
         </ThemeProvider>
       </AppProvider>

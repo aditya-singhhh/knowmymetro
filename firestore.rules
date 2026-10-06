@@ -61,6 +61,15 @@ service cloud.firestore {
         && request.resource.data.delay is int && request.resource.data.delay > -1800 && request.resource.data.delay < 3600
         && request.resource.data.at is int
         && request.resource.data.updatedAt == request.time;
+      // delay history: append-only, one entry per rider per reading
+      match /log/{entry} {
+        allow create: if signedIn()
+          && entry.matches(request.auth.uid + '_[0-9]+')
+          && request.resource.data.keys().hasOnly(['delay', 'at', 'uid', 'updatedAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.delay is int && request.resource.data.delay > -1800 && request.resource.data.delay < 3600
+          && request.resource.data.updatedAt == request.time;
+      }
     }
     match /timetable/{doc} { allow read: if true; }
     match /disruptions/{doc} { allow read: if signedIn(); }

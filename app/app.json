@@ -38,7 +38,7 @@
         "ACCESS_FINE_LOCATION"
       ],
       "predictiveBackGestureEnabled": true,
-      "versionCode": 5
+      "versionCode": 6
     },
     "web": {
       "output": "static",

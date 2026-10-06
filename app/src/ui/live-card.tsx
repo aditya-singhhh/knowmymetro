@@ -26,7 +26,7 @@ export function DelayPill({ delay, rider }: { delay: number; rider?: boolean }) 
   return <View style={[s.pill, { backgroundColor: tone.bg }]}><T v="caption" color={tone.fg} style={{ fontWeight: '700' }}>{text}</T></View>;
 }
 
-export function LiveCard({ live, onRide, rideMsg, onMissed }: { live: LiveTrip; onRide?: () => void; rideMsg?: string | null; onMissed?: () => void }) {
+export function LiveCard({ live, onRide, rideMsg, onMissed, onStations }: { live: LiveTrip; onRide?: () => void; rideMsg?: string | null; onMissed?: () => void; onStations?: (leg: number) => void }) {
   const { t, tt, lang } = useApp();
   const th = useTheme();
   const { c } = th;
@@ -115,6 +115,11 @@ export function LiveCard({ live, onRide, rideMsg, onMissed }: { live: LiveTrip; 
             <T v="caption" color={c.ink2} style={{ fontWeight: '400', flex: 1 }} numberOfLines={1}>{nm(stops[0].stn)}</T>
             <T v="caption" color={c.ink2} style={{ fontWeight: '400', flex: 1, textAlign: 'right' }} numberOfLines={1}>{nm(stops[stops.length - 1].stn)}</T>
           </View>
+          {onStations ? (
+            <Tap onPress={() => onStations(Math.min(st.leg, legs.length - 1))} hitSlop={8} style={{ alignSelf: 'flex-start', marginTop: 2 }}>
+              <T v="sub" color={c.tint} style={{ fontWeight: '600' }}>{t('all_stations')} ›</T>
+            </Tap>
+          ) : null}
         </View>
       ) : null}
 
