@@ -76,6 +76,7 @@ async function main() {
       else if (kmh < 1 && wasMoving) { still += (g.t - gps[i - 1].t) / 1000; if (still >= 15) { gpsStops++; wasMoving = false; still = 0; } }
     }
 
+    writeFileSync(`reports/series/${n}.trip.json`, JSON.stringify({ startedAt: m.startedAt, endedAt: m.endedAt, trip: m.trip ?? null, stopReason: m.stopReason ?? null }));
     out.push(`## ${n}. ${ist(m.startedAt)} IST · ${r1(dur)} min · stop: ${m.stopReason ?? '—'} · ${m.platform}${m.trip ? ` · live trip ${m.trip.legs.map((l: S) => `${l.from}>${l.to}`).join(', ')}` : ''}`,
       `- samples: ${samples.length} (${Object.entries({ gps: gps.length, cell: cell.length, dm: dm.length, mot: mot.length, evt: evt.length, mark: mark.length, bar: bar.length }).map(([k, v]) => `${k} ${v}`).join(', ')})`,
       `- GPS: median accuracy ${r1(pct(acc, 0.5))} m, p90 ${r1(pct(acc, 0.9))} m, longest gap ${r1(maxGap)} s, minutes with a fix ${minutesWithFix}/${Math.ceil(dur)}`,
@@ -87,12 +88,15 @@ async function main() {
       `- stops: motion detected ${stopsEvt}, GPS shows ${gpsStops}, doors tapped ${mark.length}`, '');
 
     // time series without location: t (s from start), gps speed, accuracy, motion fields
-    const rows = ['t,src,gps_kmh,acc,h,v,j,r,state,mot_kmh,a_x,a_y,a_z,g_x,g_y,g_z,event'];
+    // (the whole report is encrypted for the analyst, so positions are included for replays)
+    const rows = ['t,abs,src,gps_kmh,acc,h,v,j,r,state,mot_kmh,a_x,a_y,a_z,g_x,g_y,g_z,event,lat,lon,cells'];
     for (const s of samples) {
       const t = ((s.t - m.startedAt) / 1000).toFixed(1);
-      if (s.k === 'gps') rows.push(`${t},gps,${s.spd != null ? (s.spd * 3.6).toFixed(1) : ''},${s.acc != null ? Math.round(s.acc) : ''},,,,,,,,,,,,,`);
-      else if (s.k === 'dm') rows.push(`${t},dm,,,${s.h},${s.v},${s.j},${s.r},${s.s},${s.kmh ?? ''},${s.a.join(',')},${s.g.join(',')},`);
-      else if (s.k === 'evt' || s.k === 'mark') rows.push(`${t},${s.k},,,,,,,,,,,,,,,${s.e ?? 'doors'}`);
+      const abs = s.t;
+      if (s.k === 'gps') rows.push(`${t},${abs},gps,${s.spd != null ? (s.spd * 3.6).toFixed(1) : ''},${s.acc != null ? Math.round(s.acc) : ''},,,,,,,,,,,,,,${s.lat},${s.lon},`);
+      else if (s.k === 'dm') rows.push(`${t},${abs},dm,,,${s.h},${s.v},${s.j},${s.r},${s.s},${s.kmh ?? ''},${s.a.join(',')},${s.g.join(',')},,,,`);
+      else if (s.k === 'evt' || s.k === 'mark') rows.push(`${t},${abs},${s.k},,,,,,,,,,,,,,,${s.e ?? 'doors:' + (s.station ?? '')},,,`);
+      else if (s.k === 'cell') rows.push(`${t},${abs},cell,,,,,,,,,,,,,,,,,,${(s.c ?? []).map((x: S) => `${x.type}:${x.mcc}-${x.mnc}-${x.tac}-${x.ci}:${x.dbm ?? ''}${x.reg ? '*' : ''}`).join(' ')}`);
     }
     writeFileSync(`reports/series/${n}.csv`, rows.join('\n'));
   }
