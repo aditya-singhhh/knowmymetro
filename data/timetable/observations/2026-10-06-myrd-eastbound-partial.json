@@ -1,0 +1,63 @@
+{
+ "type": "board",
+ "source": "community screenshot (Where is my Train)",
+ "date": "2026-10-06",
+ "service": "weekday",
+ "line": "PURPLE",
+ "station": "MYRD",
+ "towards": "WHTM",
+ "trains": [
+  {
+   "dep": "20:27",
+   "from": "MYRD",
+   "to": "WHTM",
+   "pf": "1",
+   "arrive": {
+    "WHTM": "21:32"
+   }
+  },
+  {
+   "dep": "20:32",
+   "from": "CLGA",
+   "to": "WHTM",
+   "pf": "1",
+   "arrive": {
+    "WHTM": "21:37"
+   }
+  },
+  {
+   "dep": "20:37",
+   "from": "MYRD",
+   "to": "WHTM",
+   "pf": "1",
+   "arrive": {
+    "WHTM": "21:42"
+   }
+  },
+  {
+   "dep": "20:42",
+   "from": "CLGA",
+   "to": "WHTM",
+   "pf": "1",
+   "arrive": {
+    "WHTM": "21:47"
+   }
+  },
+  {
+   "dep": "20:47",
+   "from": "MYRD",
+   "to": "WHTM",
+   "pf": "1",
+   "arrive": {
+    "WHTM": "21:55"
+   }
+  },
+  {
+   "dep": "20:52",
+   "from": "?",
+   "to": "WHTM",
+   "pf": "1"
+  }
+ ],
+ "note": "partial: one screen, 20:27-20:52 only"
+}
