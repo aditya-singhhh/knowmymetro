@@ -32,6 +32,13 @@ jobs:
               legs = ' | '.join(f"{fmt(l['dep'])} {l['from']}>{l['to']}" for l in o['legs'])
               print(f"::notice title=Option (stand {o['standMinutes']} min, fare {o['fare']})::{legs} -> {fmt(o['arr'])}")
           PY
+  share:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Share link endpoint
+        run: |
+          body=$(curl -s -w ' HTTP %{http_code}' https://knowmymetro.web.app/api/share/AbCdEfGhJkLmNpQrStUvWx23 | head -c 300)
+          echo "::notice title=Share endpoint::$body"
   builds:
     runs-on: ubuntu-latest
     defaults:
