@@ -15,7 +15,9 @@ jobs:
         env:
           URLS: ${{ inputs.urls }}
         run: |
+          set +e
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          echo "::notice title=build-tools::$BT"
           n=0
           for u in $URLS; do
             n=$((n+1)); f=app$n.apk
@@ -23,8 +25,10 @@ jobs:
             size=$(stat -c %s $f)
             zipok=$(unzip -tq $f >/dev/null 2>&1 && echo ok || echo BROKEN)
             badge=$($BT/aapt2 dump badging $f 2>&1 | grep -E "^package:|sdkVersion|targetSdkVersion|native-code" | tr '\n' ' ' | head -c 600)
-            sig=$($BT/apksigner verify --print-certs $f 2>&1 | grep -E "Signer #1 certificate SHA-256|ERROR|WARNING: .*not" | head -3 | tr '\n' ' ')
+            $BT/apksigner verify -v --print-certs $f > sig$n.txt 2>&1; rc=$?
+            sig=$(grep -E "Verified using|certificate SHA-256|ERROR|DOES NOT VERIFY" sig$n.txt | head -8 | tr '\n' ' ' | head -c 700)
             testonly=$($BT/aapt2 dump xmltree --file AndroidManifest.xml $f 2>/dev/null | grep -c testOnly || true)
-            echo "::notice title=APK $n ($size bytes, zip $zipok, testOnly=$testonly)::$badge"
-            echo "::notice title=APK $n signature::$sig"
+            minsdk=$($BT/aapt2 dump badging $f 2>/dev/null | grep -oE "^(min)?[sS]dkVersion:'[0-9]+'" | head -1)
+            echo "::notice title=APK $n size $size zip $zipok testOnly $testonly $minsdk::$badge"
+            echo "::notice title=APK $n signature exit $rc::$sig"
           done
