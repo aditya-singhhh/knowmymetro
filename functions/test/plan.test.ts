@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fmt, type PlanRequest, type Timetable } from '@kmm/shared';
 import { DEFAULT_TUNING, plan } from '../src/engine/plan';
-import timetable from '../../data/timetable.json';
+import timetable from './fixtures/timetable-2026-08-17.json';
 
 const tt = timetable as unknown as Timetable;
 const TUESDAY = '20260929';
