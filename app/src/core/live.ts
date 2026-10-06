@@ -11,6 +11,7 @@ import { secondsNow, serviceFor, ymd, LiveTracker, type LiveStatus, type PlanOpt
 import { track } from './analytics';
 import { getTrainDelay, shareTrainDelay } from './firebase';
 import { notifyNow } from './notify';
+import { endShare, updateShare } from './share-live';
 import { markStation, onSample, startRecording, stopRecording, uploadPendingRecordings } from './recorder';
 
 export type LiveMode = 'watch' | 'ride';
@@ -96,6 +97,7 @@ function end() {
 export function stopLive(reason: 'user' | 'arrived' = 'user') {
   if (!live) return;
   const wasRide = live.mode === 'ride';
+  if (wasRide) endShare(timetable, live);
   if (wasRide) track('live_ended', { reason, delay: live.status.delay, source: live.status.source });
   end();
   if (wasRide) { stopRecording(reason); uploadPendingRecordings().catch(() => undefined); }
@@ -110,7 +112,7 @@ function tick() {
   askRiders(now);
   const st = live.tracker.status(now);
   live.status = st;
-  if (live.mode === 'ride') { alerts(st); share(st, now); }
+  if (live.mode === 'ride') { alerts(st); share(st, now); if (timetable) updateShare(timetable, live); }
   emit();
   if (st.phase === 'arrived' && now - st.arrival > 60) {
     if (live.mode === 'ride') stopLive('arrived'); else { end(); emit(); }

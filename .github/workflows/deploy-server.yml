@@ -10,7 +10,7 @@ on:
         default: functions,firestore,storage
   push:
     branches: [main]
-    paths: ['functions/**', 'shared/**', 'data/**', 'firestore.rules', 'storage.rules', 'firebase.json']
+    paths: ['functions/**', 'shared/**', 'data/**', 'web/**', 'firestore.rules', 'storage.rules', 'firebase.json']
 
 concurrency: deploy-server
 
@@ -34,6 +34,16 @@ jobs:
         run: |
           set -o pipefail
           npx --yes firebase-tools@14 deploy --only ${{ inputs.only || 'functions,firestore,storage' }} --project knowmymetro --non-interactive --force 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+      - name: Deploy web pages (hosting)
+        if: ${{ !inputs.only || contains(inputs.only, 'hosting') }}
+        continue-on-error: true
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: |
+          set -o pipefail
+          npx --yes firebase-tools@14 deploy --only hosting --project knowmymetro --non-interactive 2>&1 | tee "$RUNNER_TEMP/hosting.log" || {
+            grep -iE "error|denied|permission|not enabled|failed|HTTP" "$RUNNER_TEMP/hosting.log" | tail -10 | while IFS= read -r line; do echo "::error title=Hosting::${line//%/%25}"; done; exit 1; }
+          echo "::notice title=Hosting::deployed https://knowmymetro.web.app"
       - name: Report errors as annotations
         if: failure()
         run: |

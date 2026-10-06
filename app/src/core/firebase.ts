@@ -190,3 +190,8 @@ export async function getTrainDelay(date: string, origin: string, start: number)
     return v;
   } catch { return null; }
 }
+
+/** shares/{token}: snapshot of a live trip for the share link (see share-live.ts). */
+export function shareSnapshot(token: string, data: Record<string, unknown>) {
+  return asUser((uid) => setDoc(doc(getFirestore(), `shares/${token}`), { ...data, uid, updatedAt: serverTimestamp() }));
+}

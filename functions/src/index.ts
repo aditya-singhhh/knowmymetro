@@ -10,7 +10,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { defineBoolean, defineInt } from 'firebase-functions/params';
-import { HttpsError, onCall } from 'firebase-functions/https';
+import { HttpsError, onCall, onRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
 import { setGlobalOptions } from 'firebase-functions/options';
 import { onSchedule } from 'firebase-functions/scheduler';
@@ -150,4 +150,22 @@ export const crunchInterchanges = onSchedule({ schedule: 'every day 02:45', time
   }
   await batch.commit();
   cache = null;
+});
+
+/* ------------------------------------------------------------------ shared live trips */
+/**
+ * shares/{token} is written by a rider's app while they share a live trip (see app/src/core/share-live.ts).
+ * The web page /t/{token} (hosting, web/share.html) reads it through this endpoint, so the page needs
+ * no keys and only someone with the link can see the trip. Stale shares (6 h) are treated as ended.
+ */
+export const shareView = onRequest({ cors: true, invoker: 'public', memory: '256MiB', maxInstances: 5 }, async (req, res) => {
+  const token = (req.path.split('/').filter(Boolean).pop() ?? '').trim();
+  res.set('Cache-Control', 'no-store');
+  if (!/^[A-Za-z0-9]{20,40}$/.test(token)) { res.status(400).json({ error: 'bad-link' }); return; }
+  const snap = await db.doc(`shares/${token}`).get();
+  if (!snap.exists) { res.status(404).json({ error: 'not-found' }); return; }
+  const d = snap.data()!;
+  const updated = (d.updatedAt as Timestamp | undefined)?.toMillis() ?? 0;
+  const { uid: _uid, ...pub } = d;
+  res.json({ ...pub, updatedAt: updated, ended: !!d.ended || Date.now() - updated > 6 * 3600 * 1000 });
 });

@@ -32,3 +32,4 @@ export const uploadRecording = (_r: { id: string; startedAt: number; endedAt: nu
 export const trainKey = (date: string, origin: string, start: number) => `${date}_${origin}_${start}`;
 export const shareTrainDelay = (_d: { date: string; origin: string; start: number; line: string; delay: number; at: number }) => Promise.resolve(false);
 export const getTrainDelay = async (_d: string, _o: string, _s: number): Promise<{ delay: number; at: number } | null> => null;
+export const shareSnapshot = (_t: string, _d: Record<string, unknown>) => Promise.resolve(false);

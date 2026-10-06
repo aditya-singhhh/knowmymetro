@@ -4,6 +4,9 @@ export type Lang = (typeof LANGS)[number][0];
 export const LOCALE: Record<Lang, string> = {"en":"en-IN","kn":"kn-IN","hi":"hi-IN","ta":"ta-IN","te":"te-IN"};
 
 export const en = {
+ "share_live": "Share",
+ "sharing": "Sharing",
+ "share_live_msg": "Follow my metro ride live:",
  "doors_btn": "Doors opened",
  "doors_hint": "No GPS here. Tap at each stop to keep your position exact.",
  "arrived_at": "Reached {s}",
@@ -235,6 +238,9 @@ export const en = {
 export type StringKey = keyof typeof en;
 
 export const kn: Partial<Record<StringKey, string>> = {
+ "share_live": "ಹಂಚಿ",
+ "sharing": "ಹಂಚಲಾಗುತ್ತಿದೆ",
+ "share_live_msg": "ನನ್ನ ಮೆಟ್ರೋ ಪ್ರಯಾಣವನ್ನು ಲೈವ್ ಆಗಿ ನೋಡಿ:",
  "doors_btn": "ಬಾಗಿಲು ತೆರೆಯಿತು",
  "doors_hint": "ಇಲ್ಲಿ GPS ಇಲ್ಲ. ಸರಿಯಾದ ಸ್ಥಾನಕ್ಕಾಗಿ ಪ್ರತಿ ನಿಲ್ದಾಣದಲ್ಲಿ ಒತ್ತಿ.",
  "arrived_at": "{s} ತಲುಪಿದೆ",
@@ -465,6 +471,9 @@ export const kn: Partial<Record<StringKey, string>> = {
 };
 
 export const hi: Partial<Record<StringKey, string>> = {
+ "share_live": "शेयर",
+ "sharing": "शेयर हो रहा है",
+ "share_live_msg": "मेरी मेट्रो यात्रा लाइव देखें:",
  "doors_btn": "दरवाज़े खुले",
  "doors_hint": "यहाँ GPS नहीं है। सही जगह के लिए हर स्टेशन पर दबाएँ।",
  "arrived_at": "{s} पहुँच गई",
@@ -695,6 +704,9 @@ export const hi: Partial<Record<StringKey, string>> = {
 };
 
 export const ta: Partial<Record<StringKey, string>> = {
+ "share_live": "பகிர்",
+ "sharing": "பகிரப்படுகிறது",
+ "share_live_msg": "என் மெட்ரோ பயணத்தை நேரலையில் பாருங்கள்:",
  "doors_btn": "கதவுகள் திறந்தன",
  "doors_hint": "இங்கே GPS இல்லை. சரியான இடத்துக்கு ஒவ்வொரு நிலையத்திலும் தட்டவும்.",
  "arrived_at": "{s} ஐ அடைந்தது",
@@ -925,6 +937,9 @@ export const ta: Partial<Record<StringKey, string>> = {
 };
 
 export const te: Partial<Record<StringKey, string>> = {
+ "share_live": "షేర్",
+ "sharing": "షేర్ అవుతోంది",
+ "share_live_msg": "నా మెట్రో ప్రయాణాన్ని లైవ్‌లో చూడండి:",
  "doors_btn": "తలుపులు తెరుచుకున్నాయి",
  "doors_hint": "ఇక్కడ GPS లేదు. సరైన స్థానం కోసం ప్రతి స్టేషన్‌లో నొక్కండి.",
  "arrived_at": "{s} చేరింది",

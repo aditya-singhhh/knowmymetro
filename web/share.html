@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Live metro ride · KnowMyMetro</title>
+<meta name="description" content="Follow a Namma Metro ride live.">
+<meta name="theme-color" content="#7B2268">
+<style>
+:root{--bg:#F2F2F7;--card:#fff;--ink:#101014;--ink2:#6B6B72;--ink3:#A1A1A8;--sep:#E3E3E8;--fill:#EEEEF3;--tint:#7B2268;--tintbg:#F4E6F0;
+  --ok:#128A4A;--okbg:#E3F5EA;--meh:#9A6A00;--mehbg:#FCF1D6;--bad:#C4401A;--badbg:#FDE8E1;--PURPLE:#8C2877;--GREEN:#00953A;--YELLOW:#E5B800;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Kannada","Noto Sans",Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1C1C1F;--ink:#F4F4F6;--ink2:#9C9CA4;--ink3:#66666E;--sep:#2E2E33;--fill:#2A2A2E;--tint:#E08BCF;--tintbg:#3A1A33;
+  --ok:#4ED487;--okbg:#12301F;--meh:#F2C85A;--mehbg:#342A10;--bad:#FF8A66;--badbg:#3A1C14;--PURPLE:#C766B4;--GREEN:#34C46A;--YELLOW:#F2CB4E;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 var(--font);-webkit-font-smoothing:antialiased}
+main{max-width:520px;margin:0 auto;padding:16px 16px calc(32px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--tint);font-size:15px;padding-top:4px}
+.card{background:var(--card);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:4px;background:var(--ink3)}
+.dot.on{background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(18,138,74,.5)}70%{box-shadow:0 0 0 8px rgba(18,138,74,0)}100%{box-shadow:0 0 0 0 rgba(18,138,74,0)}}
+@media (prefers-reduced-motion:reduce){.dot.on{animation:none}}
+.cap{font-size:13px;color:var(--ink2);font-weight:500}
+.pill{margin-left:auto;font-size:13px;font-weight:700;border-radius:6px;padding:3px 8px}
+.ok{color:var(--ok);background:var(--okbg)}.meh{color:var(--meh);background:var(--mehbg)}.bad{color:var(--bad);background:var(--badbg)}
+h1{font-size:26px;line-height:1.15;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--ink2);font-size:15px}
+.eta{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--sep);padding-top:12px;margin-top:2px}
+.eta b{font-size:22px;font-variant-numeric:tabular-nums}
+.list{padding:8px 0}
+.st{display:grid;grid-template-columns:56px 28px 1fr;align-items:stretch;height:48px;position:relative;padding-right:16px}
+.st .t,.st .name{align-self:center}
+.st .t{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:15px;padding-right:6px}
+.st .ax{position:relative;height:100%;display:flex;justify-content:center}
+.st .ax::before{content:"";position:absolute;top:0;bottom:0;width:4px;background:var(--rail,var(--sep))}
+.st:first-child .ax::before{top:50%}.st:last-child .ax::before{bottom:50%}
+.st .n{position:absolute;top:50%;left:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:6px;border:3px solid var(--ink3);background:var(--card)}
+.st.past .n{border-color:var(--c);background:var(--c)}.st.past{--rail:var(--c)}
+.st.past .name,.st.past .t{color:var(--ink3)}
+.st .name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st.end .name{font-weight:700;color:var(--tint)}
+.train{position:absolute;left:50%;width:24px;height:24px;margin-left:-12px;border-radius:12px;background:var(--c);color:#fff;display:grid;place-items:center;font-size:11px;z-index:2;transition:top .6s ease}
+.legh{display:flex;align-items:center;gap:8px;padding:6px 16px 4px;font-size:13px;font-weight:600;color:var(--ink2)}
+.legh i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.foot{text-align:center;font-size:13px;color:var(--ink2);display:flex;flex-direction:column;gap:10px;align-items:center}
+.cta{display:inline-block;background:var(--tint);color:#fff;text-decoration:none;font-weight:700;border-radius:12px;padding:12px 18px}
+.muted{color:var(--ink3);font-size:12px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">● KnowMyMetro</div>
+  <div class="card" id="status">
+    <div class="row"><span class="dot" id="dot"></span><span class="cap" id="src">Loading…</span><span class="pill" id="pill" hidden></span></div>
+    <h1 id="head">Finding the train…</h1>
+    <div class="sub" id="sub"></div>
+    <div class="eta" id="etaRow" hidden><span class="sub" id="etaLbl">Reaching</span><b id="eta"></b></div>
+  </div>
+  <div class="card list" id="list" hidden></div>
+  <div class="foot">
+    <span id="upd" class="muted"></span>
+    <a class="cta" href="https://knowmymetro.web.app/">Plan your Namma Metro trip with KnowMyMetro</a>
+    <span class="muted">Times are estimates from the timetable and live readings. Not affiliated with BMRCL.</span>
+  </div>
+</main>
+<script>
+(() => {
+  const token = location.pathname.split('/').filter(Boolean).pop();
+  const $ = (id) => document.getElementById(id);
+  const hhmm = (s) => { s = ((Math.round(s) % 86400) + 86400) % 86400; return String(Math.floor(s / 3600)).padStart(2, '0') + ':' + String(Math.floor(s % 3600 / 60)).padStart(2, '0'); };
+  const lineName = { GREEN: 'Green line', PURPLE: 'Purple line', YELLOW: 'Yellow line' };
+  const esc = (x) => String(x ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  let data = null;
+
+  function render() {
+    if (!data) return;
+    const n = data.now || {}, legs = (data.trip && data.trip.legs) || [];
+    const L = legs[Math.min(n.leg || 0, legs.length - 1)] || { stops: [] };
+    const d = Math.round((n.delay || 0) / 60);
+    const live = !data.ended && (n.source === 'gps' || n.source === 'motion' || n.source === 'rider');
+    $('dot').className = 'dot' + (live ? ' on' : '');
+    $('src').textContent = data.ended ? 'Trip ended' : n.source === 'gps' ? 'Live GPS' : n.source === 'motion' ? 'Live · counting stops (no GPS)' : 'Estimated from timetable';
+    const pill = $('pill');
+    pill.hidden = !!data.ended || n.phase === 'arrived';
+    pill.className = 'pill ' + (d >= 5 ? 'bad' : d >= 2 ? 'meh' : 'ok');
+    pill.textContent = d >= 1 ? d + ' min late' : d <= -1 ? -d + ' min early' : 'On time';
+    let head = '', sub = '';
+    if (data.ended || n.phase === 'arrived') { head = data.ended && n.phase !== 'arrived' ? 'Trip ended' : 'Reached ' + (data.trip.to || ''); }
+    else if (n.phase === 'before') { head = 'Waiting at ' + L.from; sub = (lineName[L.line] || '') + ' towards ' + L.towards + (L.platform ? ' · Platform ' + L.platform : ''); }
+    else if (n.phase === 'changing') { head = 'Changing at ' + L.from; sub = 'To ' + (lineName[L.line] || '') + ' towards ' + L.towards; }
+    else { head = n.next && n.next !== n.prev ? 'Next: ' + n.next : 'At ' + (n.prev || L.from); sub = (lineName[L.line] || '') + ' towards ' + L.towards; }
+    if (n.missed && n.missed.next) sub += ' · Missed the connection at ' + n.missed.at + ', next train ' + hhmm(n.missed.next);
+    $('head').textContent = head; $('sub').textContent = sub;
+    $('etaRow').hidden = !!data.ended || n.phase === 'arrived';
+    $('etaLbl').textContent = 'Reaching ' + (data.trip.to || '');
+    $('eta').textContent = '~' + hhmm(n.arrival || 0);
+
+    // stations of the current ride with the train on them
+    const list = $('list');
+    const stops = L.stops || [];
+    list.hidden = !stops.length || !!data.ended;
+    const idx = stops.findIndex((s) => s.n === n.prev);
+    const pos = n.phase === 'riding' ? Math.max(0, idx) + (n.next !== n.prev ? n.frac || 0 : 0) : n.phase === 'arrived' ? stops.length - 1 : -1;
+    const c = 'var(--' + (L.line || 'PURPLE') + ')';
+    let html = '<div class="legh" style="--c:' + c + '"><i></i>' + esc(lineName[L.line] || '') + ' · ' + esc(L.from) + ' → ' + esc(L.to) + '</div>';
+    stops.forEach((s, i) => {
+      const past = pos >= 0 && i <= Math.floor(pos);
+      html += '<div class="st' + (past ? ' past' : '') + (i === stops.length - 1 ? ' end' : '') + '" style="--c:' + c + '">' +
+        '<span class="t">' + hhmm(s.t + (n.delay || 0)) + '</span><span class="ax"><span class="n"></span>' +
+        (pos >= 0 && Math.floor(pos) === i && n.phase === 'riding' ? '<span class="train" style="top:' + (12 + (pos - i) * 48) + 'px">▶</span>' : '') +
+        '</span><span class="name">' + esc(s.n) + '</span></div>';
+    });
+    list.innerHTML = html;
+  }
+
+  function ago() {
+    if (!data || !data.updatedAt) return;
+    const s = Math.max(0, Math.round((Date.now() - data.updatedAt) / 1000));
+    $('upd').textContent = data.ended ? '' : 'Updated ' + (s < 60 ? s + ' s' : Math.round(s / 60) + ' min') + ' ago';
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('/api/share/' + encodeURIComponent(token), { cache: 'no-store' });
+      if (!r.ok) { $('head').textContent = r.status === 404 ? 'This link has expired or is wrong' : 'Could not load the trip'; $('src').textContent = ''; return; }
+      data = await r.json();
+      render(); ago();
+      if (data.ended) return;
+    } catch { $('src').textContent = 'Offline · retrying'; }
+    setTimeout(load, 15000);
+  }
+  setInterval(ago, 5000);
+  load();
+})();
+</script>
+</body>
+</html>
