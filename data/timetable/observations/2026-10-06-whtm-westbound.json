@@ -1,0 +1,1002 @@
+{
+ "type": "board",
+ "source": "community screen recording (Where is my Train)",
+ "date": "2026-10-06",
+ "service": "weekday",
+ "line": "PURPLE",
+ "station": "WHTM",
+ "towards": "CLGA",
+ "trains": [
+  {
+   "dep": "05:00",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "06:29"
+   }
+  },
+  {
+   "dep": "05:20",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "06:40"
+   }
+  },
+  {
+   "dep": "05:31",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "06:51"
+   }
+  },
+  {
+   "dep": "05:42",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "07:02"
+   }
+  },
+  {
+   "dep": "05:52",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "07:12"
+   }
+  },
+  {
+   "dep": "06:03",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "07:23"
+   }
+  },
+  {
+   "dep": "06:13",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "07:33"
+   }
+  },
+  {
+   "dep": "06:24",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "07:44"
+   }
+  },
+  {
+   "dep": "06:34",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "07:54"
+   }
+  },
+  {
+   "dep": "06:45",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "08:05"
+   }
+  },
+  {
+   "dep": "06:55",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "08:15"
+   }
+  },
+  {
+   "dep": "07:06",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "08:26"
+   }
+  },
+  {
+   "dep": "07:16",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "08:36"
+   }
+  },
+  {
+   "dep": "07:27",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "08:47"
+   }
+  },
+  {
+   "dep": "07:37",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "08:57"
+   }
+  },
+  {
+   "dep": "07:47",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "09:07"
+   }
+  },
+  {
+   "dep": "07:58",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "09:18"
+   }
+  },
+  {
+   "dep": "08:09",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "09:29"
+   }
+  },
+  {
+   "dep": "08:19",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "09:39"
+   }
+  },
+  {
+   "dep": "08:30",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "09:50"
+   }
+  },
+  {
+   "dep": "08:40",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "10:00"
+   }
+  },
+  {
+   "dep": "08:51",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "10:11"
+   }
+  },
+  {
+   "dep": "09:00",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "10:20"
+   }
+  },
+  {
+   "dep": "09:11",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "10:31"
+   }
+  },
+  {
+   "dep": "09:22",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "10:42"
+   }
+  },
+  {
+   "dep": "09:33",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "10:53"
+   }
+  },
+  {
+   "dep": "09:43",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "11:03"
+   }
+  },
+  {
+   "dep": "09:54",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "11:14"
+   }
+  },
+  {
+   "dep": "10:04",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "11:24"
+   }
+  },
+  {
+   "dep": "10:15",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "11:35"
+   }
+  },
+  {
+   "dep": "10:25",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "11:45"
+   }
+  },
+  {
+   "dep": "10:36",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "11:56"
+   }
+  },
+  {
+   "dep": "10:46",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "12:06"
+   }
+  },
+  {
+   "dep": "10:57",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "12:17"
+   }
+  },
+  {
+   "dep": "11:05",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "12:25"
+   }
+  },
+  {
+   "dep": "11:13",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "12:33"
+   }
+  },
+  {
+   "dep": "11:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "12:41"
+   }
+  },
+  {
+   "dep": "11:29",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "12:49"
+   }
+  },
+  {
+   "dep": "11:37",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "12:57"
+   }
+  },
+  {
+   "dep": "11:45",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "13:05"
+   }
+  },
+  {
+   "dep": "11:53",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "13:13"
+   }
+  },
+  {
+   "dep": "12:01",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "13:21"
+   }
+  },
+  {
+   "dep": "12:09",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "13:29"
+   }
+  },
+  {
+   "dep": "12:17",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "13:37"
+   }
+  },
+  {
+   "dep": "12:25",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "13:45"
+   }
+  },
+  {
+   "dep": "12:33",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "13:53"
+   }
+  },
+  {
+   "dep": "12:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "14:01"
+   }
+  },
+  {
+   "dep": "12:49",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "14:09"
+   }
+  },
+  {
+   "dep": "12:57",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "14:17"
+   }
+  },
+  {
+   "dep": "13:05",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "14:25"
+   }
+  },
+  {
+   "dep": "13:13",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "14:33"
+   }
+  },
+  {
+   "dep": "13:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "14:41"
+   }
+  },
+  {
+   "dep": "13:29",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "14:49"
+   }
+  },
+  {
+   "dep": "13:37",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "14:57"
+   }
+  },
+  {
+   "dep": "13:45",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "15:05"
+   }
+  },
+  {
+   "dep": "13:53",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "15:13"
+   }
+  },
+  {
+   "dep": "14:01",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "15:21"
+   }
+  },
+  {
+   "dep": "14:09",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "15:29"
+   }
+  },
+  {
+   "dep": "14:17",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "15:37"
+   }
+  },
+  {
+   "dep": "14:25",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "15:45"
+   }
+  },
+  {
+   "dep": "14:33",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "15:53"
+   }
+  },
+  {
+   "dep": "14:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "16:01"
+   }
+  },
+  {
+   "dep": "14:49",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "16:09"
+   }
+  },
+  {
+   "dep": "14:57",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "16:17"
+   }
+  },
+  {
+   "dep": "15:05",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "16:25"
+   }
+  },
+  {
+   "dep": "15:13",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "16:33"
+   }
+  },
+  {
+   "dep": "15:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "16:41"
+   }
+  },
+  {
+   "dep": "15:31",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "16:51"
+   }
+  },
+  {
+   "dep": "15:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "17:01"
+   }
+  },
+  {
+   "dep": "15:51",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "17:11"
+   }
+  },
+  {
+   "dep": "16:02",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "17:22"
+   }
+  },
+  {
+   "dep": "16:11",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "17:31"
+   }
+  },
+  {
+   "dep": "16:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "17:41"
+   }
+  },
+  {
+   "dep": "16:31",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "17:51"
+   }
+  },
+  {
+   "dep": "16:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "18:01"
+   }
+  },
+  {
+   "dep": "16:51",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "18:11"
+   }
+  },
+  {
+   "dep": "17:01",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "18:21"
+   }
+  },
+  {
+   "dep": "17:11",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "18:31"
+   }
+  },
+  {
+   "dep": "17:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "18:41"
+   }
+  },
+  {
+   "dep": "17:31",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "18:51"
+   }
+  },
+  {
+   "dep": "17:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "19:01"
+   }
+  },
+  {
+   "dep": "17:51",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "19:11"
+   }
+  },
+  {
+   "dep": "18:01",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "19:21"
+   }
+  },
+  {
+   "dep": "18:11",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "19:31"
+   }
+  },
+  {
+   "dep": "18:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "19:41"
+   }
+  },
+  {
+   "dep": "18:31",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "19:51"
+   }
+  },
+  {
+   "dep": "18:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "20:01"
+   }
+  },
+  {
+   "dep": "18:51",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "20:11"
+   }
+  },
+  {
+   "dep": "19:01",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "20:21"
+   }
+  },
+  {
+   "dep": "19:11",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "20:31"
+   }
+  },
+  {
+   "dep": "19:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "20:41"
+   }
+  },
+  {
+   "dep": "19:31",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "20:51"
+   }
+  },
+  {
+   "dep": "19:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "21:01"
+   }
+  },
+  {
+   "dep": "19:51",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "21:11"
+   }
+  },
+  {
+   "dep": "20:01",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "21:21"
+   }
+  },
+  {
+   "dep": "20:11",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "21:31"
+   }
+  },
+  {
+   "dep": "20:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "21:41"
+   }
+  },
+  {
+   "dep": "20:31",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "21:51"
+   }
+  },
+  {
+   "dep": "20:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "22:01"
+   }
+  },
+  {
+   "dep": "20:51",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "22:11"
+   }
+  },
+  {
+   "dep": "21:01",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "22:21"
+   }
+  },
+  {
+   "dep": "21:11",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "22:31"
+   }
+  },
+  {
+   "dep": "21:21",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "22:41"
+   }
+  },
+  {
+   "dep": "21:31",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "22:51"
+   }
+  },
+  {
+   "dep": "21:41",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "23:01"
+   }
+  },
+  {
+   "dep": "21:51",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "23:11"
+   }
+  },
+  {
+   "dep": "22:01",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "23:21"
+   }
+  },
+  {
+   "dep": "22:15",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "23:35"
+   }
+  },
+  {
+   "dep": "22:30",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "23:50"
+   }
+  },
+  {
+   "dep": "22:45",
+   "from": "WHTM",
+   "to": "CLGA",
+   "pf": "2",
+   "arrive": {
+    "CLGA": "24:05"
+   }
+  }
+ ],
+ "note": "all rows Whitefield to Challaghatta; arrival 80 min except 05:00 (89). 19:51-20:21 rows passed quickly"
+}
