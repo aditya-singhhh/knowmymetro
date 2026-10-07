@@ -118,6 +118,8 @@ export function delayAt(stops: LiveStop[], km: number, t: number): number | null
 }
 
 const OFF_LINE_M = 400;
+/** Fixes worse than this are network guesses (Wi-Fi, towers), often minutes old: not used for live position. */
+const MAX_ACC = 75;
 const SWITCH_DELAY = 4 * 60;              // this far off the plan: check if it's another train
 
 export class LiveTracker {
@@ -142,6 +144,7 @@ export class LiveTracker {
   private lastStationAt: number | null = null;
   private lastStart: number | null = null;
   private lastFixT: number | null = null;
+  private lastLatLon: string | null = null;
   private arrivedAt: number | null = null;
   private walk: { from: number; to: number | null; offTrain: boolean } | null = null;
   /** last good GPS position along the current ride (km from its first station) */
@@ -157,9 +160,15 @@ export class LiveTracker {
 
   /** A GPS fix. */
   fix(t: number, lat: number, lon: number, accuracy: number) {
-    if (!this.ok || accuracy > 150) return;
+    if (!this.ok || accuracy > MAX_ACC) return;
     // fixes can arrive late in a batch: one older than what we already used tells us nothing new
     if (this.lastFixT != null && t <= this.lastFixT) return;
+    // Underground and near stations the phone keeps reporting the same network (Wi-Fi/tower) position over and over,
+    // with a round accuracy (100 m, 200 m): that is where we were, not where we are (7 Oct: frozen at Cubbon Park
+    // for 3 min while the train went on). Real satellite fixes always move a little.
+    const key = `${lat},${lon}`;
+    if (key === this.lastLatLon) return;
+    this.lastLatLon = key;
     this.lastFixT = t;
     // which ride does this fix belong to: the current one, or the next (after a change)
     for (const li of [this.onLeg, this.onLeg + 1]) {
@@ -238,12 +247,17 @@ export class LiveTracker {
     // the screen may already be further on (from GPS) than the last station a reading confirmed: count from there
     if (this.prog.li === this.onLeg) this.lastStation = Math.max(this.lastStation, Math.floor(this.prog.step / 2));
     const waiting = this.riding && this.boardedLeg < this.onLeg && this.lastStation === 0;
+    // right after we reached the change station, before walking to the other platform, a stop or a tap is the old
+    // train's doors (7 Oct: the tap as the Green train reached Majestic was taken as boarding the Purple one)
+    if (waiting && !this.walked() && this.arrivedAt != null && t - this.arrivedAt < 180) return;
     // Trains stop at every station in order: this stop is the next station, or the one after if a stop went unnoticed.
     // still standing at the station we last reached (boarding, or a long stop): nothing new
     if (t < L.stops[this.lastStation].dep + this.delay + 30 && !(sure && waiting)) return;
     // prefer the very next station; take the one after only if the next clearly doesn't fit
     let best: { k: number; gap: number } | null = null;
-    for (const k of [this.lastStation + 1, this.lastStation + 2]) {
+    // on the platform waiting, a still phone looks like a stop: only a tap or a felt departure counts (below)
+    if (waiting && !sure && !(this.lastStart != null && t - this.lastStart >= 30 && t - this.lastStart <= 240 && (this.arrivedAt == null || this.lastStart > this.arrivedAt + 30) && this.walked())) return;
+    for (const k of waiting ? [] : [this.lastStation + 1, this.lastStation + 2]) {   // waiting: the train is unknown, see below
       if (k >= L.stops.length) break;
       const gap = Math.abs(t - (L.stops[k].arr + this.delay));
       if (gap <= 150) { best = { k, gap }; break; }
@@ -253,7 +267,7 @@ export class LiveTracker {
     // next station if that's anywhere near (5 min). A motion stop counts as the next station if it comes early but
     // after most of the normal running time from the last station we know (trains don't stop between stations
     // underground often enough to matter, and an early stop means we were too pessimistic).
-    if (!best && this.lastStation + 1 < L.stops.length && !(sure && waiting)) {
+    if (!best && this.lastStation + 1 < L.stops.length && !waiting) {
       const k = this.lastStation + 1;
       const exp = L.stops[k].arr + this.delay, gap = Math.abs(t - exp);
       const run = L.stops[k].arr - L.stops[this.lastStation].dep;
@@ -263,11 +277,20 @@ export class LiveTracker {
     // a tap ("doors opened") right after a change, before we knew which train: it can be the train before or after.
     // Motion alone isn't trusted on the platform (standing still looks like a stop) unless the phone also felt a train
     // pull away 30 s - 4 min before this stop (underground boarding with no GPS and no tap).
-    const pulledAway = this.lastStart != null && t - this.lastStart >= 30 && t - this.lastStart <= 240;
+    const pulledAway = this.lastStart != null && t - this.lastStart >= 30 && t - this.lastStart <= 240 && (this.arrivedAt == null || this.lastStart > this.arrivedAt + 30) && this.walked();
     if (!best && waiting && (sure || pulledAway)) {
-      for (const off of this.offsets(L)) {
-        const gap = Math.abs(t - (L.stops[1]?.arr ?? Infinity) - off);
-        if (gap <= 90 && (!best || gap < best.gap)) best = { k: 1, gap };
+      // a tap can come a few stations in (no GPS underground): try the first few stations
+      // with several trains a few minutes apart more than one station fits; we board the train that leaves right
+      // after we last walked (onto it), so prefer the station whose implied departure is closest to that
+      let score = Infinity;
+      for (let k = 1; k <= (sure ? Math.min(4, L.stops.length - 1) : 1); k++) {
+        const left = t - (L.stops[k].arr - L.stops[0].dep);
+        for (const off of this.offsets(L)) {
+          const gap = Math.abs(t - L.stops[k].arr - off);
+          if (gap > 90) continue;
+          const sc = this.lastWalkEnd != null && left >= this.lastWalkEnd - 60 ? Math.abs(left - this.lastWalkEnd) : this.lastWalkEnd != null ? 1e6 + gap : gap;
+          if (sc < score) { score = sc; best = { k, gap }; }
+        }
       }
     }
     if (!best) return; // doesn't line up with any station: ignore
@@ -287,9 +310,10 @@ export class LiveTracker {
     if (!N) return;
     const planned = N.stops[0].dep;
     const quick = Math.min(this.changeNeed, 120);   // brisk walk; if we miss it we roll to the next train anyway
-    const next = arrived + quick > planned ? this.nextDeparture(N, arrived + quick) : planned;
+    const next = this.nextDeparture(N, arrived + quick) ?? planned;   // the first train we can make, even if earlier than planned
     this.arrivedAt = arrived;
     this.walk = null;
+    this.lastWalkEnd = null;
     this.onLeg++;
     this.lastStation = 0;
     this.platformAt = arrived + 60;
@@ -316,6 +340,7 @@ export class LiveTracker {
       }
       return;
     }
+    if (this.onLeg > 0 && this.boardedLeg < this.onLeg) this.lastWalkEnd = t;
     // stopped walking after a change, not on the train yet: on the platform now, so the next train is the first one
     // leaving from now on, and this change took this long (worth learning)
     if (this.onLeg > 0 && this.boardedLeg < this.onLeg && this.walk && this.walk.to == null) {
@@ -325,16 +350,17 @@ export class LiveTracker {
       const secs = Math.round(t - this.walk.from);
       // only learn when we saw the walk start as we got off (otherwise the start time is a guess)
       if (this.walk.offTrain && secs > 30 && secs < 900) this.change = { station: L.from, fromLine: prev.line, toLine: L.line, from: prev.stops[prev.stops.length - 1].stn, seconds: secs };
-      const W = L.stops[0];
-      if (W.dep + this.delay < t - 30) {
-        const nd = this.nextDeparture(L, t - 30);
-        if (nd != null) { this.delay = nd - W.dep; this.source = 'timetable'; }
-      }
+      const nd = this.nextDeparture(L, t - 30);
+      if (nd != null) { this.delay = nd - L.stops[0].dep; this.source = 'timetable'; }
     }
   }
 
   /** The last change we measured (from walking off the train to standing on the next platform). */
   change: { station: string; fromLine: string; toLine: string; from: string; seconds: number } | null = null;
+
+  /** Changing lines means walking to another platform: until we've walked, a felt departure is the old train. */
+  private walked() { return this.walk?.to != null; }
+  private lastWalkEnd: number | null = null;
 
   /** The motion sensor felt the train pull away from a stop. */
   started(t: number) { this.lastStart = t; }
@@ -394,7 +420,9 @@ export class LiveTracker {
   private inOrder(li: number, km: number, t: number): { t0: number; pattern: number; delay: number; a: number; b: number } | null {
     if (this.platformAt == null) return null;
     const L = this.legs[li];
-    let best: { t0: number; pattern: number; delay: number; a: number; b: number; dep: number } | null = null;
+    type C = { t0: number; pattern: number; delay: number; a: number; b: number; dep: number };
+    let best: C | null = null;
+    const all: C[] = [];
     for (const [pi, t0] of this.tt.departures[this.service] ?? []) {
       const q = this.tt.patterns[pi];
       if (q.line !== L.line) continue;
@@ -405,6 +433,13 @@ export class LiveTracker {
       const d = delayAt(stopsOf(this.tt, pi, t0, qa, qb), km, t);
       if (d == null || d < -60 || d > 480) continue;
       if (!best || dep < best.dep) best = { t0, pattern: pi, delay: d, a: qa, b: qb, dep };
+      all.push({ t0, pattern: pi, delay: d, a: qa, b: qb, dep });
+    }
+    // Most trains run on time: if the first one in order only fits as 4+ min late but a later one fits on time
+    // (within a minute), it's that one (7 Oct evening: the on-time 19:15, not a 19:10 running 5 min late).
+    if (best && best.delay >= 240) {
+      const onTime = all.filter((c) => Math.abs(c.delay) <= 60).sort((x, y) => x.dep - y.dep)[0];
+      if (onTime) return onTime;
     }
     return best;
   }
@@ -420,7 +455,11 @@ export class LiveTracker {
     // No reading says otherwise: once this ride is over by the clock, we're at the change for the next one.
     // If the connection is missed, expect the next train that way instead (shown as an offset from the plan).
     const cur = legs[this.onLeg];
-    if (this.onLeg + 1 < legs.length && t > cur.stops[cur.stops.length - 1].arr + this.delay + 30) this.advance(cur.stops[cur.stops.length - 1].arr + this.delay);
+    // ...but not while we haven't seen the train reach that station (GPS zone, a stop, walking off) and it's under
+    // 3 min past the expected time: the train may just be slower than the timetable (it happened at Majestic).
+    const curEnd = cur.stops[cur.stops.length - 1];
+    const reached = this.lastStation >= cur.stops.length - 1 || !this.riding;
+    if (this.onLeg + 1 < legs.length && t > curEnd.arr + this.delay + 30 && (reached || t > curEnd.arr + this.delay + 180)) this.advance(Math.min(t - 30, curEnd.arr + this.delay + (reached ? 0 : 150)));
     // Riding, after a change, nothing says we boarded, and the train we expected has left: we're still on the
     // platform, so expect the next one (the screen keeps saying where to change and when that train leaves).
     if (this.riding && this.onLeg > 0 && this.boardedLeg < this.onLeg) {
@@ -449,6 +488,15 @@ export class LiveTracker {
 
     const base = { leg: li, delay: Math.round(dd), source: this.source, age: this.lastReading == null ? null : Math.round(t - this.lastReading), switched: this.switched, missed, arrival, offLine: this.offLine, train: null as LiveStatus['train'] };
 
+    // the clock says we're there, but a fresh fix says we're still short of the last station: not yet (the train is
+    // slower than the timetable), and the arrival moves with the clock
+    const Pz = this.pos;
+    const notThereYet = li === legs.length - 1 && t >= arrHere && Pz != null && Pz.li === li && t - Pz.t <= 30 && Pz.km < last.km - 0.15;
+    if (notThereYet) { this.delay = t + 30 - last.arr; return this.status(t); }
+    // riding: say "arrived" when something showed it (GPS at the station, the stop, walking off), or 3 min after
+    // the expected time; before that keep showing the last station as next
+    const seenEnd = !this.riding || this.lastStation >= L.stops.length - 1 || t >= arrHere + 180;
+    if (li === legs.length - 1 && t >= arrHere && !seenEnd) { this.delay = t + 15 - last.arr; return this.status(t); }
     if (li === legs.length - 1 && t >= arrHere) {
       return { ...base, phase: 'arrived', prev: last.stn, next: null, frac: 1, etas: [], action: null };
     }

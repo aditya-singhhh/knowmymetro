@@ -187,7 +187,7 @@ test('standing at a station longer than the timetable says: still "at" it, and l
   const stops = lt.legs[0].stops;
   for (let t = stops[0].dep + 30; t < stops[2].arr; t += 20) { const p = posAt(stops, t); lt.fix(t, p.lat, p.lon, 15); }
   const S = tt.stations[stops[2].stn];
-  for (let t = stops[2].arr; t <= stops[2].dep + 60; t += 10) lt.fix(t, S.lat, S.lon, 15);
+  for (let t = stops[2].arr; t <= stops[2].dep + 60; t += 10) lt.fix(t, S.lat + (t % 7) * 1e-6, S.lon, 15);   // real fixes wobble
   const st = lt.status(stops[2].dep + 60);
   assert.equal(st.next, stops[2].stn, 'at the station, not next one');
   assert.ok(st.delay >= 50, `delay ${st.delay}`);
