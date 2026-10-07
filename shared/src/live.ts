@@ -136,6 +136,9 @@ export class LiveTracker {
    *  left without us means we're still on the platform, waiting for the next one. */
   riding = false;
   private vote: { key: string; n: number; since: number } | null = null;
+  /** when we reached the platform for the current ride (after a change) */
+  private platformAt: number | null = null;
+  private identify = -1;
   /** last good GPS position along the current ride (km from its first station) */
   private pos: { t: number; km: number; li: number } | null = null;
   /** furthest point shown on each ride (half-steps), so the display never goes backwards */
@@ -160,6 +163,8 @@ export class LiveTracker {
       if (li !== this.onLeg) {
         // only move to the next ride once we've left its first station (we are on the new train)
         if (km < 0.3) continue;
+        const prev = this.legs[li - 1];
+        if (prev && this.platformAt == null) this.platformAt = prev.stops[prev.stops.length - 1].arr + this.delay + 60;
         this.onLeg = li;
         this.lastStation = 0;
         this.switched = false;
@@ -167,7 +172,8 @@ export class LiveTracker {
       const end = L.stops[L.stops.length - 1].km;
       // still on the platform after a change (not boarded yet): our position says nothing about the train's delay
       if (this.riding && li > 0 && this.boardedLeg < li && km <= 0.3) { this.offLine = false; return; }
-      const justBoarded = km > 0.3 && this.boardedLeg < li;
+      if (km > 0.3 && this.boardedLeg < li && li > 0) this.identify = li;   // which train we boarded: settle on the first good fix
+      const justBoarded = km > 0.3 && this.identify === li && accuracy <= 60;
       if (km > 0.3) this.boardedLeg = Math.max(this.boardedLeg, li);
       let passed = 0;
       L.stops.forEach((st, k) => { if (km >= st.km - 0.15) passed = k; });
@@ -190,8 +196,14 @@ export class LiveTracker {
       if (justBoarded && li > 0) {
         // just got on after a change: which train is it? Trains can be 3 min apart here, so take the one that fits
         // a good fix best, and don't call it "a different train" (catching the next one is normal)
-        if (Math.abs(d) > 90 && accuracy <= 60) { const c = this.candidate(li, km, t, 120); if (c) { this.useTrain(li, c); d = c.delay; } }
-        this.switched = false; this.vote = null;
+        // Trains leave a station in timetable order and don't leave early, so the train we're on is the first one
+        // scheduled after we reached the platform that fits this fix while running late (or on time), not an
+        // "early" later train. Fall back to the best fit if none does.
+        if (accuracy <= 60) {
+          const c = this.inOrder(li, km, t) ?? (Math.abs(d) > 90 ? this.candidate(li, km, t, 120) : null);
+          if (c) { this.useTrain(li, c); d = c.delay; }
+        }
+        this.switched = false; this.vote = null; this.identify = -1;
         this.delay = d; this.source = 'gps'; this.lastReading = t;
         return;
       }
@@ -290,6 +302,26 @@ export class LiveTracker {
     return best;
   }
 
+  /** First train (by scheduled departure from our station, at or after we reached the platform) that fits this
+   *  reading as on time or late (up to 10 min). */
+  private inOrder(li: number, km: number, t: number): { t0: number; pattern: number; delay: number; a: number; b: number } | null {
+    if (this.platformAt == null) return null;
+    const L = this.legs[li];
+    let best: { t0: number; pattern: number; delay: number; a: number; b: number; dep: number } | null = null;
+    for (const [pi, t0] of this.tt.departures[this.service] ?? []) {
+      const q = this.tt.patterns[pi];
+      if (q.line !== L.line) continue;
+      const qa = q.stops.indexOf(L.from), qb = q.stops.indexOf(L.to, qa + 1);
+      if (qa < 0 || qb < 0) continue;
+      const dep = t0 + q.dep[qa];
+      if (dep < this.platformAt - 180 || dep > t) continue;   // timetable times can be a couple of minutes off
+      const d = delayAt(stopsOf(this.tt, pi, t0, qa, qb), km, t);
+      if (d == null || d < -60 || d > 480) continue;
+      if (!best || dep < best.dep) best = { t0, pattern: pi, delay: d, a: qa, b: qb, dep };
+    }
+    return best;
+  }
+
   private useTrain(li: number, c: { t0: number; pattern: number; a: number; b: number }) {
     const L = this.legs[li], q = this.tt.patterns[c.pattern];
     this.legs[li] = { ...L, pattern: c.pattern, start: c.t0, origin: q.stops[0], terminus: q.stops[q.stops.length - 1], held: 0,
@@ -308,6 +340,7 @@ export class LiveTracker {
       const next = arrived + this.changeNeed > planned ? this.nextDeparture(N, arrived + this.changeNeed) : planned;
       this.onLeg++;
       this.lastStation = 0;
+      this.platformAt = arrived + 60;
       this.delay = next != null ? next - planned : 0;
       this.source = 'timetable';
       this.switched = false;
