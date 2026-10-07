@@ -1,0 +1,10 @@
+{
+ "type": "board",
+ "source": "rider: scheduled time at Majestic as seen by the rider; actually left ~10:14:30 (4.5 min late, GPS)",
+ "date": "2026-10-07",
+ "service": "weekday",
+ "line": "PURPLE",
+ "station": "KGWA",
+ "towards": "WHTM",
+ "trains": [{ "dep": "10:10", "from": "KGWA", "to": "ITPL", "pf": "1" }]
+}
