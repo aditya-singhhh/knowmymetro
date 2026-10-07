@@ -11,6 +11,11 @@ export interface Cell {
   mcc: string | null;
   mnc: string | null;
   dbm: number | null;    // signal strength
+  // newer app builds (null/absent on older ones)
+  age?: number | null;   // ms since the modem took this reading
+  conn?: number | null;  // 1 = primary serving, 2 = secondary (carrier aggregation), 0 = none
+  ta?: number | null;    // timing advance (LTE/GSM): distance to the tower in steps (~78 m LTE, ~550 m GSM)
+  rsrp?: number | null; rsrq?: number | null; snr?: number | null; bw?: number | null;
 }
 
 const Native = requireOptionalNativeModule<{ getCellsAsync(): Promise<Cell[]> }>('CellInfo');

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.SystemClock
 import android.telephony.CellIdentityNr
 import android.telephony.CellInfo
 import android.telephony.CellInfoGsm
@@ -88,17 +89,27 @@ class CellInfoModule : Module() {
   private fun okL(v: Long): Long? = if (v == Long.MAX_VALUE) null else v
 
   private fun describe(cell: CellInfo): Map<String, Any?>? {
-    val base = mutableMapOf<String, Any?>("reg" to cell.isRegistered)
+    val base = mutableMapOf<String, Any?>("reg" to cell.isRegistered,
+      // how old this reading is (ms): the modem may hand back a cached one
+      "age" to ((SystemClock.elapsedRealtimeNanos() - cell.timeStamp) / 1_000_000L),
+      "conn" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) cell.cellConnectionStatus else null))
     when {
       cell is CellInfoLte -> {
         val id = cell.cellIdentity
         base += mapOf("type" to "lte", "ci" to ok(id.ci), "tac" to ok(id.tac), "pci" to ok(id.pci), "arfcn" to ok(id.earfcn),
-          "mcc" to mcc(id), "mnc" to mnc(id), "dbm" to ok(cell.cellSignalStrength.dbm))
+          "mcc" to mcc(id), "mnc" to mnc(id), "dbm" to ok(cell.cellSignalStrength.dbm),
+          // timing advance ~ distance to the tower (78 m per step); quality figures help tell faces apart
+          "ta" to ok(cell.cellSignalStrength.timingAdvance),
+          "rsrp" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ok(cell.cellSignalStrength.rsrp) else null),
+          "rsrq" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ok(cell.cellSignalStrength.rsrq) else null),
+          "snr" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ok(cell.cellSignalStrength.rssnr) else null),
+          "bw" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) ok(id.bandwidth) else null))
       }
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && cell is CellInfoNr -> {
         val id = cell.cellIdentity as CellIdentityNr
+        val ss = cell.cellSignalStrength as android.telephony.CellSignalStrengthNr
         base += mapOf("type" to "nr", "ci" to okL(id.nci), "tac" to ok(id.tac), "pci" to ok(id.pci), "arfcn" to ok(id.nrarfcn),
-          "mcc" to mcc(id), "mnc" to mnc(id), "dbm" to ok(cell.cellSignalStrength.dbm))
+          "mcc" to mcc(id), "mnc" to mnc(id), "dbm" to ok(ss.dbm), "rsrp" to ok(ss.ssRsrp), "rsrq" to ok(ss.ssRsrq), "snr" to ok(ss.ssSinr))
       }
       cell is CellInfoWcdma -> {
         val id = cell.cellIdentity
@@ -108,7 +119,8 @@ class CellInfoModule : Module() {
       cell is CellInfoGsm -> {
         val id = cell.cellIdentity
         base += mapOf("type" to "gsm", "ci" to ok(id.cid), "tac" to ok(id.lac), "pci" to ok(id.bsic), "arfcn" to ok(id.arfcn),
-          "mcc" to mcc(id), "mnc" to mnc(id), "dbm" to ok(cell.cellSignalStrength.dbm))
+          "mcc" to mcc(id), "mnc" to mnc(id), "dbm" to ok(cell.cellSignalStrength.dbm),
+          "ta" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ok(cell.cellSignalStrength.timingAdvance) else null))
       }
       else -> return null
     }

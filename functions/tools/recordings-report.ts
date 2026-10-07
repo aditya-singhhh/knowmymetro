@@ -96,7 +96,7 @@ async function main() {
       if (s.k === 'gps') rows.push(`${t},${abs},gps,${s.spd != null ? (s.spd * 3.6).toFixed(1) : ''},${s.acc != null ? Math.round(s.acc) : ''},,,,,,,,,,,,,,${s.lat},${s.lon},`);
       else if (s.k === 'dm') rows.push(`${t},${abs},dm,,,${s.h},${s.v},${s.j},${s.r},${s.s},${s.kmh ?? ''},${s.a.join(',')},${s.g.join(',')},,,,`);
       else if (s.k === 'evt' || s.k === 'mark') rows.push(`${t},${abs},${s.k},,,,,,,,,,,,,,,${s.e ?? 'doors:' + (s.station ?? '')},,,`);
-      else if (s.k === 'cell') rows.push(`${t},${abs},cell,,,,,,,,,,,,,,,,,,${(s.c ?? []).map((x: S) => `${x.type}:${x.mcc}-${x.mnc}-${x.tac}-${x.ci}:${x.dbm ?? ''}${x.reg ? '*' : ''}`).join(' ')}`);
+      else if (s.k === 'cell') rows.push(`${t},${abs},cell,,,,,,,,,,,,,,,,,,${(s.c ?? []).map((x: S) => `${x.type}:${x.mcc}-${x.mnc}-${x.tac}-${x.ci}|${x.pci ?? ''}@${x.arfcn ?? ''}|${x.ta ?? ''}|${x.rsrq ?? ''}:${x.dbm ?? ''}${x.reg ? '*' : ''}`).join(' ')}`);
     }
     writeFileSync(`reports/series/${n}.csv`, rows.join('\n'));
   }
