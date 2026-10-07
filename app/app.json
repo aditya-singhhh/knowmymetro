@@ -37,8 +37,8 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
       ],
-      "predictiveBackGestureEnabled": true,
-      "versionCode": 6
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 7
     },
     "web": {
       "output": "static",
