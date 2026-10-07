@@ -180,3 +180,15 @@ test('one odd GPS fix far from the plan does not change the train', () => {
   assert.equal(st.switched, false);
   assert.equal(lt.legs[0].start, start);
 });
+
+test('standing at a station longer than the timetable says: still "at" it, and later by that much', () => {
+  const o = trip();
+  const lt = new LiveTracker(tt, service, o.legs);
+  const stops = lt.legs[0].stops;
+  for (let t = stops[0].dep + 30; t < stops[2].arr; t += 20) { const p = posAt(stops, t); lt.fix(t, p.lat, p.lon, 15); }
+  const S = tt.stations[stops[2].stn];
+  for (let t = stops[2].arr; t <= stops[2].dep + 60; t += 10) lt.fix(t, S.lat, S.lon, 15);
+  const st = lt.status(stops[2].dep + 60);
+  assert.equal(st.next, stops[2].stn, 'at the station, not next one');
+  assert.ok(st.delay >= 50, `delay ${st.delay}`);
+});

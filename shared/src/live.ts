@@ -136,6 +136,8 @@ export class LiveTracker {
    *  left without us means we're still on the platform, waiting for the next one. */
   riding = false;
   private vote: { key: string; n: number; since: number } | null = null;
+  /** last good GPS position along the current ride (km from its first station) */
+  private pos: { t: number; km: number; li: number } | null = null;
 
   constructor(private tt: Timetable, private service: string, legs: Leg[], private changeNeed = 180) {
     this.legs = legs.map((l) => legPlan(tt, service, l)).filter((x): x is LiveLegPlan => !!x);
@@ -166,6 +168,13 @@ export class LiveTracker {
       let passed = 0;
       L.stops.forEach((st, k) => { if (km >= st.km - 0.15) passed = k; });
       this.lastStation = passed;
+      if (accuracy <= 60) this.pos = { t, km, li };
+      // in a station's zone: the train is there now, so it hasn't left yet (real stops are longer than the timetable's)
+      const zone = L.stops.findIndex((st) => Math.abs(st.km - km) <= 0.12);
+      if (zone > 0 && zone < L.stops.length - 1 && accuracy <= 60 && this.boardedLeg >= li && t > L.stops[zone].dep + this.delay) {
+        this.delay = t - L.stops[zone].dep; this.source = 'gps'; this.lastReading = t;
+        return;
+      }
       let d = delayAt(L.stops, km, t);
       if (d == null) {
         // standing at a station within its timetable window: the delay must fit that window
@@ -337,10 +346,23 @@ export class LiveTracker {
     // riding: find the stretch we're on by expected times
     let k = 0;
     while (k + 1 < L.stops.length && t >= L.stops[k + 1].arr + dd) k++;
-    const atStation = t <= L.stops[k].dep + dd;
-    const nextK = Math.min(k + 1, L.stops.length - 1);
+    let atStation = t <= L.stops[k].dep + dd;
+    let nextK = Math.min(k + 1, L.stops.length - 1);
     const span = L.stops[nextK].arr - L.stops[k].dep;
-    const frac = atStation ? 0 : Math.max(0, Math.min(1, (t - (L.stops[k].dep + dd)) / Math.max(1, span)));
+    let frac = atStation ? 0 : Math.max(0, Math.min(1, (t - (L.stops[k].dep + dd)) / Math.max(1, span)));
+    // a fresh, good GPS position beats the clock: "At X" while in X's zone, "Next Y" only once we've left it
+    const P = this.pos;
+    if (P && P.li === li && t - P.t <= 20) {
+      const zone = L.stops.findIndex((st) => Math.abs(st.km - P.km) <= 0.12);
+      if (zone >= 0) { k = zone; atStation = true; frac = 0; }
+      else {
+        k = 0; while (k + 1 < L.stops.length && L.stops[k + 1].km <= P.km) k++;
+        atStation = false;
+        const a = L.stops[k], b = L.stops[Math.min(k + 1, L.stops.length - 1)];
+        frac = b.km > a.km ? Math.max(0, Math.min(1, (P.km - a.km) / (b.km - a.km))) : 0;
+      }
+      nextK = Math.min(k + 1, L.stops.length - 1);
+    }
     const etas = L.stops.slice(k + 1).map((s) => ({ stn: s.stn, at: s.arr + dd }));
     const stopsAway = L.stops.length - 1 - k;
     const action = { kind: (li === legs.length - 1 ? 'getoff' : 'change') as 'getoff' | 'change', at: last.stn, stopsAway, inSec: Math.round(arrHere - t) };
