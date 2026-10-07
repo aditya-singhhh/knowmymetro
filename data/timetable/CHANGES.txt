@@ -10,6 +10,5 @@
 ~ board MYRD PURPLE towards WHTM weekday 20:27-20:47: 2 already placed, 3 others -> 3 (3 moved, 0 dropped, 0 added), 0 short trips carried (community screenshot (Where is my Train))
 + pattern GREEN:NGSA>APTS (cut from GREEN:BIET>APTS)
 ~ board NGSA GREEN towards APTS weekday 05:09-23:06: 0 already placed, 113 others -> 114 (108 moved, 5 dropped, 6 added), 39 short trips carried (community screen recording (Where is my Train), checked against station board)
-~ board KGWA PURPLE towards WHTM weekday 10:10-10:10: 0 already placed, 1 others -> 1 (1 moved, 0 dropped, 0 added), 0 short trips carried (rider: scheduled time at Majestic as seen by the rider; actually left ~10:14:30 (4.5 min late, GPS))
 ~ running times PURPLE:WHTM>CLGA: WHTM +0s, KGWA +37s, MYRD +0s, CLGA +0s (end to end 80:11 -> 80:11)
 ~ running times PURPLE:MYRD>WHTM: MYRD +0s, WHTM +43s (end to end 64:17 -> 65:00)

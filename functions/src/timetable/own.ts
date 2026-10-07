@@ -184,9 +184,7 @@ function applyBoard(s: Src, o: BoardObservation, log: string[], seen: Map<string
     const k = p.stops.findIndex((x) => x.stn === o.station);
     const list = dep[p.id] ?? [];
     // trains an earlier board already placed (e.g. at the terminus) stay; this board only confirms them
-    // also the same train (same start and end) a few minutes off: a board with one or two rows moves it rather than adding a twin
-    const twin = (here: number) => rows.some((r) => r.from === p.stops[0].stn && r.to === p.stops[p.stops.length - 1].stn && Math.abs(at(r.dep) - here) <= 180);
-    const keep = list.filter((t) => { const here = at(t) + off(p.stops[k].dep); if (((here >= lo && here <= hi) || twin(here)) && !seen.has(`${o.service}|${p.id}|${t}`)) { old.push(here); return false; } return true; });
+    const keep = list.filter((t) => { const here = at(t) + off(p.stops[k].dep); if (here >= lo && here <= hi && !seen.has(`${o.service}|${p.id}|${t}`)) { old.push(here); return false; } return true; });
     if (list.length) dep[p.id] = keep;
   }
   // add what the board shows
