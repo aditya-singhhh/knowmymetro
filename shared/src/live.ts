@@ -138,6 +138,8 @@ export class LiveTracker {
   private vote: { key: string; n: number; since: number } | null = null;
   /** last good GPS position along the current ride (km from its first station) */
   private pos: { t: number; km: number; li: number } | null = null;
+  /** furthest point shown on each ride (half-steps), so the display never goes backwards */
+  private prog = { li: -1, step: -1 };
 
   constructor(private tt: Timetable, private service: string, legs: Leg[], private changeNeed = 180) {
     this.legs = legs.map((l) => legPlan(tt, service, l)).filter((x): x is LiveLegPlan => !!x);
@@ -163,6 +165,8 @@ export class LiveTracker {
         this.switched = false;
       }
       const end = L.stops[L.stops.length - 1].km;
+      // still on the platform after a change (not boarded yet): our position says nothing about the train's delay
+      if (this.riding && li > 0 && this.boardedLeg < li && km <= 0.3) { this.offLine = false; return; }
       const justBoarded = km > 0.3 && this.boardedLeg < li;
       if (km > 0.3) this.boardedLeg = Math.max(this.boardedLeg, li);
       let passed = 0;
@@ -312,7 +316,7 @@ export class LiveTracker {
     // platform, so expect the next one (the screen keeps saying where to change and when that train leaves).
     if (this.riding && this.onLeg > 0 && this.boardedLeg < this.onLeg) {
       const W = legs[this.onLeg];
-      if (t > W.stops[0].dep + this.delay + 45) {
+      if (t > W.stops[0].dep + this.delay + 90) {
         const nd = this.nextDeparture(W, W.stops[0].dep + this.delay + 1);
         if (nd != null) { this.delay = nd - W.stops[0].dep; this.source = 'timetable'; }
       }
@@ -339,7 +343,7 @@ export class LiveTracker {
     if (li === legs.length - 1 && t >= arrHere) {
       return { ...base, phase: 'arrived', prev: last.stn, next: null, frac: 1, etas: [], action: null };
     }
-    if (this.boardedLeg < li && (t < first.dep + dd || (this.riding && li > 0 && t <= first.dep + dd + 45))) {
+    if (this.boardedLeg < li && (t < first.dep + dd || (this.riding && li > 0 && t <= first.dep + dd + 90))) {
       return { ...base, train: this.trainWhere(t), phase: li === 0 ? 'before' : 'changing', prev: null, next: first.stn, frac: 0, etas: L.stops.map((s) => ({ stn: s.stn, at: s.arr + dd })),
         action: { kind: li === 0 ? 'board' : 'change', at: first.stn, stopsAway: 0, inSec: Math.round(first.dep + dd - t) } };
     }
@@ -351,18 +355,30 @@ export class LiveTracker {
     const span = L.stops[nextK].arr - L.stops[k].dep;
     let frac = atStation ? 0 : Math.max(0, Math.min(1, (t - (L.stops[k].dep + dd)) / Math.max(1, span)));
     // a fresh, good GPS position beats the clock: "At X" while in X's zone, "Next Y" only once we've left it
+    // Where we are, as a half-step: 2k = at station k, 2k+1 = between k and k+1.
+    // The clock gives one answer; a recent good GPS fix gives a better one. GPS comes every ~minute in the background,
+    // so between fixes the clock may move us on, but never past the next station, and never backwards.
+    let step = atStation ? 2 * k : 2 * k + 1;
     const P = this.pos;
-    if (P && P.li === li && t - P.t <= 20) {
-      const zone = L.stops.findIndex((st) => Math.abs(st.km - P.km) <= 0.12);
-      if (zone >= 0) { k = zone; atStation = true; frac = 0; }
-      else {
-        k = 0; while (k + 1 < L.stops.length && L.stops[k + 1].km <= P.km) k++;
-        atStation = false;
-        const a = L.stops[k], b = L.stops[Math.min(k + 1, L.stops.length - 1)];
-        frac = b.km > a.km ? Math.max(0, Math.min(1, (P.km - a.km) / (b.km - a.km))) : 0;
-      }
-      nextK = Math.min(k + 1, L.stops.length - 1);
+    if (P && P.li === li && t - P.t <= 75) {
+      const z = L.stops.findIndex((st) => Math.abs(st.km - P.km) <= (this.prog.li === li && this.prog.step === 2 * L.stops.indexOf(st) ? 0.2 : 0.12));
+      let g = 0; while (g + 1 < L.stops.length && L.stops[g + 1].km <= P.km) g++;
+      const gps = z >= 0 ? 2 * z : 2 * g + 1;
+      // at a station by GPS: stay there until a fix shows we left (the train stands longer than the timetable says)
+      step = gps % 2 === 0 ? gps : Math.min(Math.max(step, gps), gps + 1);
     }
+    if (this.prog.li === li) step = Math.max(step, this.prog.step);
+    step = Math.min(step, 2 * (L.stops.length - 1));
+    this.prog = { li, step };
+    if (step % 2 === 0) { k = step / 2; atStation = true; frac = 0; }
+    else {
+      k = (step - 1) / 2; atStation = false;
+      const a2 = L.stops[k], b2 = L.stops[Math.min(k + 1, L.stops.length - 1)];
+      const byPos = P && P.li === li && t - P.t <= 75 ? (P.km - a2.km) / Math.max(0.01, b2.km - a2.km) : null;
+      const byClock = (t - (a2.dep + dd)) / Math.max(1, b2.arr - a2.dep);
+      frac = Math.max(0, Math.min(1, byPos ?? byClock));
+    }
+    nextK = Math.min(k + 1, L.stops.length - 1);
     const etas = L.stops.slice(k + 1).map((s) => ({ stn: s.stn, at: s.arr + dd }));
     const stopsAway = L.stops.length - 1 - k;
     const action = { kind: (li === legs.length - 1 ? 'getoff' : 'change') as 'getoff' | 'change', at: last.stn, stopsAway, inSec: Math.round(arrHere - t) };
