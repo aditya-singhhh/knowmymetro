@@ -335,7 +335,7 @@ export class LiveTracker {
         this.advance(t - 15);
         this.walk = { from: t - 15, to: null, offTrain: true };
       } else if (this.onLeg > 0 && this.boardedLeg < this.onLeg && this.arrivedAt != null) {
-        if (!this.walk && t - this.arrivedAt < 120) this.walk = { from: t, to: null, offTrain: false };   // the clock had already moved us to the change
+        if (!this.walk && t - this.arrivedAt < 120) this.walk = { from: Math.min(t, this.arrivedAt + 15), to: null, offTrain: t - this.arrivedAt < 60 };   // walking within a minute of arriving = getting off   // the clock had already moved us to the change
         else if (this.walk?.to != null && t - this.walk.to < 60) this.walk.to = null;     // short pause: same walk
       }
       return;
