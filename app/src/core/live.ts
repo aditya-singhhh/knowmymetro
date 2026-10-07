@@ -79,6 +79,7 @@ export async function rideTrain(tt: Timetable, id: string, option: PlanOption, d
     if (!live || live.mode !== 'ride') return;
     if (s.k === 'gps') live.tracker.fix(secondsNow(new Date(s.t)), s.lat, s.lon, s.acc ?? 999);
     else if (s.k === 'evt' && s.e === 'train_stopped') live.tracker.stopped(secondsNow(new Date(s.t)));
+    else if (s.k === 'evt' && s.e === 'train_started') live.tracker.started(secondsNow(new Date(s.t)));
     // timers pause when the app is in the background; readings keep coming, so update from them too
     if (Date.now() - lastTick >= 3000) tick();
   });

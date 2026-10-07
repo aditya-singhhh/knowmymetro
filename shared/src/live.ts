@@ -139,6 +139,8 @@ export class LiveTracker {
   /** when we reached the platform for the current ride (after a change) */
   private platformAt: number | null = null;
   private identify = -1;
+  private lastStationAt: number | null = null;
+  private lastStart: number | null = null;
   /** last good GPS position along the current ride (km from its first station) */
   private pos: { t: number; km: number; li: number } | null = null;
   /** furthest point shown on each ride (half-steps), so the display never goes backwards */
@@ -177,6 +179,7 @@ export class LiveTracker {
       if (km > 0.3) this.boardedLeg = Math.max(this.boardedLeg, li);
       let passed = 0;
       L.stops.forEach((st, k) => { if (km >= st.km - 0.15) passed = k; });
+      if (passed !== this.lastStation) this.lastStationAt = t;
       this.lastStation = passed;
       if (accuracy <= 60) this.pos = { t, km, li };
       // in a station's zone: the train is there now, so it hasn't left yet (real stops are longer than the timetable's)
@@ -226,6 +229,8 @@ export class LiveTracker {
   stopped(t: number, sure = false) {
     if (!this.ok) return;
     const L = this.legs[this.onLeg];
+    // the screen may already be further on (from GPS) than the last station a reading confirmed: count from there
+    if (this.prog.li === this.onLeg) this.lastStation = Math.max(this.lastStation, Math.floor(this.prog.step / 2));
     const waiting = this.riding && this.boardedLeg < this.onLeg && this.lastStation === 0;
     // Trains stop at every station in order: this stop is the next station, or the one after if a stop went unnoticed.
     // still standing at the station we last reached (boarding, or a long stop): nothing new
@@ -237,9 +242,23 @@ export class LiveTracker {
       const gap = Math.abs(t - (L.stops[k].arr + this.delay));
       if (gap <= 150) { best = { k, gap }; break; }
     }
-    // a tap ("doors opened") right after a change, before we knew which train: it can be the train before or after
-    // (motion alone isn't trusted here: standing still on the platform looks like a stop)
-    if (!best && sure && waiting) {
+    // Underground our delay can be off (last GPS was poor), so a real stop may come well before or after the expected
+    // time and then every later stop gets ignored: the display falls a station behind. A door tap is sure: it is the
+    // next station if that's anywhere near (5 min). A motion stop counts as the next station if it comes early but
+    // after most of the normal running time from the last station we know (trains don't stop between stations
+    // underground often enough to matter, and an early stop means we were too pessimistic).
+    if (!best && this.lastStation + 1 < L.stops.length && !(sure && waiting)) {
+      const k = this.lastStation + 1;
+      const exp = L.stops[k].arr + this.delay, gap = Math.abs(t - exp);
+      const run = L.stops[k].arr - L.stops[this.lastStation].dep;
+      const since = this.lastStationAt != null ? t - this.lastStationAt : Infinity;
+      if (sure ? gap <= 300 : t < exp && exp - t <= 300 && since >= 0.6 * run + 20) best = { k, gap };
+    }
+    // a tap ("doors opened") right after a change, before we knew which train: it can be the train before or after.
+    // Motion alone isn't trusted on the platform (standing still looks like a stop) unless the phone also felt a train
+    // pull away 30 s - 4 min before this stop (underground boarding with no GPS and no tap).
+    const pulledAway = this.lastStart != null && t - this.lastStart >= 30 && t - this.lastStart <= 240;
+    if (!best && waiting && (sure || pulledAway)) {
       for (const off of this.offsets(L)) {
         const gap = Math.abs(t - (L.stops[1]?.arr ?? Infinity) - off);
         if (gap <= 90 && (!best || gap < best.gap)) best = { k: 1, gap };
@@ -247,10 +266,17 @@ export class LiveTracker {
     }
     if (!best) return; // doesn't line up with any station: ignore
     this.lastStation = best.k;
+    this.lastStationAt = t;
     this.boardedLeg = Math.max(this.boardedLeg, this.onLeg);
-    if (waiting) { this.delay = t - L.stops[best.k].arr; this.source = 'motion'; this.lastReading = t; return; }
+    // the screen shows this station now (never behind it)
+    if (this.prog.li !== this.onLeg || this.prog.step < 2 * best.k) this.prog = { li: this.onLeg, step: 2 * best.k };
+    // a tap is certain and the train is at the station now: take its delay as is
+    if (waiting || sure) { this.delay = t - L.stops[best.k].arr; this.source = 'motion'; this.lastReading = t; return; }
     this.update(t - L.stops[best.k].arr, 'motion', t);
   }
+
+  /** The motion sensor felt the train pull away from a stop. */
+  started(t: number) { this.lastStart = t; }
 
   /** A delay another rider on this train measured `age` seconds ago; used when we have nothing fresher. */
   external(delay: number, age: number, t: number) {
@@ -337,7 +363,8 @@ export class LiveTracker {
       const arrived = cur.stops[cur.stops.length - 1].arr + this.delay;
       const N = legs[this.onLeg + 1];
       const planned = N.stops[0].dep;
-      const next = arrived + this.changeNeed > planned ? this.nextDeparture(N, arrived + this.changeNeed) : planned;
+      const quick = Math.min(this.changeNeed, 120);   // brisk walk; if we miss it we roll to the next train anyway
+      const next = arrived + quick > planned ? this.nextDeparture(N, arrived + quick) : planned;
       this.onLeg++;
       this.lastStation = 0;
       this.platformAt = arrived + 60;
@@ -364,8 +391,8 @@ export class LiveTracker {
     let missed: LiveStatus['missed'] = null;
     let nextLegDelay = 0;
     const N = legs[li + 1];
-    if (N && arrHere + this.changeNeed > N.stops[0].dep + N.held) {
-      const nextDep = this.nextDeparture(N, arrHere + this.changeNeed);
+    if (N && arrHere + Math.min(this.changeNeed, 120) > N.stops[0].dep + N.held) {
+      const nextDep = this.nextDeparture(N, arrHere + Math.min(this.changeNeed, 120));
       missed = { at: N.from, planned: N.stops[0].dep, next: nextDep };
       nextLegDelay = nextDep != null ? nextDep - N.stops[0].dep : 0;
     }
