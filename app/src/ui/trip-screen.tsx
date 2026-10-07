@@ -11,12 +11,13 @@ import { getTrip } from '@/core/trip-store';
 import { Button, Card, Notice, Screen, T, Tap } from './components';
 import { DelayPill, LiveCard, useLive } from './live-card';
 import { space, type, useTheme } from './theme';
-import { ShareButton, TripView } from './trip-view';
+import { sharePlan, TripView } from './trip-view';
 
 export function TripScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = getTrip(id);
-  const { t, tt, lang, locale } = useApp();
+  const app = useApp();
+  const { t, tt, lang, locale } = app;
   const { c } = useTheme();
   const now = useNow(15000);
   const live = useLive();
@@ -61,11 +62,21 @@ export function TripScreen() {
     if (!lp) return;
     router.push({ pathname: '/train', params: { p: String(lp.pattern), t0: String(lp.start), day: String(day), board: option.legs[i].from, alight: option.legs[i].to } });
   };
+  // one Share for the whole screen: the plan, plus where the train is now when it's being followed
+  const share = () => {
+    const st = isLive && live ? live.status : null;
+    const nowLine = st && st.phase !== 'before' && st.phase !== 'arrived'
+      ? [st.next && st.next !== st.prev ? t('train_next', { s: stationName(tt, st.next, lang) }) : st.prev ? t('train_at', { s: stationName(tt, st.prev, lang) }) : null,
+        Math.abs(st.delay) < 90 ? t('on_time') : null, t('arrive_est', { t: fmt(st.arrival) })].filter(Boolean).join(' · ')
+      : null;
+    sharePlan(option, app, nowLine).catch(() => undefined);
+  };
   const nextTrain = () => router.navigate({ pathname: '/(tabs)/(plan)', params: { from: first.from, to: last.to, at: String(Date.now()) } });
 
   return (
     <>
-      <Stack.Screen options={{ title: `${stationName(tt, first.from, lang)} – ${stationName(tt, last.to, lang)}`, headerLargeTitle: false }} />
+      <Stack.Screen options={{ title: `${stationName(tt, first.from, lang)} – ${stationName(tt, last.to, lang)}`, headerLargeTitle: false,
+        headerRight: () => <Tap onPress={share} hitSlop={12} accessibilityRole="button"><T v="headline" color={c.tint}>{t('share_live')}</T></Tap> }} />
       <Screen>
         {isLive && live ? <LiveCard live={live} onRide={ride} rideMsg={liveMsg} onMissed={nextTrain} onStations={openTrain} /> : (
           <Card style={s.summary}>
@@ -84,7 +95,6 @@ export function TripScreen() {
           </Card>
         )}
         <TripView option={option} onLeg={openTrain} />
-        {live?.mode !== 'ride' || !isLive ? <ShareButton option={option} /> : null}
         {ridden && !(isLive && live?.mode === 'ride') ? <CrowdReport origin={first.origin} board={first.from} start={first.start} dep={first.dep} /> : null}
       </Screen>
     </>

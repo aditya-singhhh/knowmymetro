@@ -1,7 +1,7 @@
 import { Share, StyleSheet, View } from 'react-native';
 import { fmt, mins, stationName, type PlanOption } from '@kmm/shared';
 import { useApp } from '@/core/app-state';
-import { Button, Card, CoachStrip, SeatBadge, T, Tap } from './components';
+import { Card, CoachStrip, SeatBadge, T, Tap } from './components';
 import { space, type, useTheme } from './theme';
 
 const LINE_KEY: Record<string, 'G' | 'P' | 'Y'> = { GREEN: 'G', PURPLE: 'P', YELLOW: 'Y' };
@@ -88,7 +88,7 @@ function Step({ time, color, children, solidBelow, dashedBelow, hollow, icon, la
 }
 
 /** Native share sheet with a short, readable plan (works with WhatsApp). */
-export function sharePlan(option: PlanOption, ctx: ReturnType<typeof useApp>) {
+export function sharePlan(option: PlanOption, ctx: ReturnType<typeof useApp>, now?: string | null) {
   const { tt, lang, t } = ctx;
   const nm = (code: string) => stationName(tt, code, lang);
   const lines = option.legs.map((l, i) => {
@@ -96,14 +96,11 @@ export function sharePlan(option: PlanOption, ctx: ReturnType<typeof useApp>) {
     const coach = ch?.kind === 'line' && ch.coaches.length ? ` · ${t('board_coach', { c: coachWords(ch.coaches, t('or'), t) })}` : '';
     return `${fmt(l.dep)} ${nm(l.from)} → ${nm(l.to)} (${t(LINE_KEY[l.line] ?? 'G')})${coach}`;
   });
-  const message = [`🚇 ${nm(option.legs[0].from)} → ${nm(option.legs[option.legs.length - 1].to)}`, ...lines, `${t('reach')} ${fmt(option.arr)}`, '', 'KnowMyMetro · knowmymetro.com'].join('\n');
+  const message = [`🚇 ${nm(option.legs[0].from)} → ${nm(option.legs[option.legs.length - 1].to)}`, ...(now ? [now] : []), ...lines, `${t('reach')} ${fmt(option.arr)}`, '', 'KnowMyMetro · knowmymetro.com'].join('\n');
   return Share.share({ message });
 }
 
-export function ShareButton({ option }: { option: PlanOption }) {
-  const app = useApp();
-  return <Button label={app.t('share_plan')} kind="plain" onPress={() => { sharePlan(option, app).catch(() => undefined); }} />;
-}
+
 
 const s = StyleSheet.create({
   step: { flexDirection: 'row', paddingRight: space.l, paddingLeft: space.s },

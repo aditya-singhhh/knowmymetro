@@ -7,8 +7,6 @@ import { StyleSheet, View } from 'react-native';
 import { fmt, secondsNow, stationName, type LiveStatus } from '@kmm/shared';
 import { useApp } from '@/core/app-state';
 import { currentLive, doorsOpened, onLive, stopLive, type LiveTrip } from '@/core/live';
-import { isSharing, SHARE_ENABLED, startShare } from '@/core/share-live';
-import { Share } from 'react-native';
 import { Button, Card, T, Tap } from './components';
 import { space, type, useTheme } from './theme';
 import { coachWords } from './trip-view';
@@ -133,16 +131,14 @@ export function LiveCard({ live, onRide, rideMsg, onMissed, onStations }: { live
         </View>
       ) : null}
 
-      <View style={[s.row, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep, paddingTop: space.m }]}>
-        <T v="headline" style={[type.time, { flex: 1 }]}>{t('arrive_est', { t: fmt(st.arrival) })}</T>
-        {st.leg + 1 < legs.length && st.phase !== 'changing' ? (
-          <T v="caption" color={c.ink2} style={{ fontWeight: '400', marginRight: space.m }} numberOfLines={1}>{t('then_line', { line: lineName(legs[st.leg + 1].line), s: nm(legs[st.leg + 1].to) })}</T>
-        ) : null}
-        {!watching && SHARE_ENABLED ? (
-          <Tap onPress={async () => { const url = await startShare(tt, live); if (url) Share.share({ message: `${t('share_live_msg')} ${url}` }).catch(() => undefined); }} hitSlop={10} style={{ marginRight: space.l }}>
-            <T v="sub" color={c.tint} style={{ fontWeight: '600' }}>{isSharing() ? t('sharing') : t('share_live')}</T>
-          </Tap>
-        ) : null}
+      {/* arrival (and the next ride) on the left, End on the right; text wraps instead of squeezing */}
+      <View style={[s.row, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep, paddingTop: space.m, alignItems: 'flex-start' }]}>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <T v="headline" style={type.time}>{t('arrive_est', { t: fmt(st.arrival) })}</T>
+          {st.leg + 1 < legs.length && st.phase !== 'changing' ? (
+            <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('then_line', { line: lineName(legs[st.leg + 1].line), s: nm(legs[st.leg + 1].to) })}</T>
+          ) : null}
+        </View>
         {!watching ? <Tap onPress={() => stopLive('user')} hitSlop={10}><T v="sub" color={c.tint} style={{ fontWeight: '600' }}>{t('live_end')}</T></Tap> : null}
       </View>
 
