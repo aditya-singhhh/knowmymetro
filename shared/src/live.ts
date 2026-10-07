@@ -132,6 +132,9 @@ export class LiveTracker {
   /** index (in the current ride) of the last station we know the train reached */
   private lastStation = 0;
   private offLine = false;
+  /** Riding (not just watching): until a reading shows we boarded a ride after a change, a planned train that has
+   *  left without us means we're still on the platform, waiting for the next one. */
+  riding = false;
 
   constructor(private tt: Timetable, private service: string, legs: Leg[], private changeNeed = 180) {
     this.legs = legs.map((l) => legPlan(tt, service, l)).filter((x): x is LiveLegPlan => !!x);
@@ -154,8 +157,10 @@ export class LiveTracker {
         if (km < 0.3) continue;
         this.onLeg = li;
         this.lastStation = 0;
+        this.switched = false;
       }
       const end = L.stops[L.stops.length - 1].km;
+      const justBoarded = km > 0.3 && this.boardedLeg < li;
       if (km > 0.3) this.boardedLeg = Math.max(this.boardedLeg, li);
       let passed = 0;
       L.stops.forEach((st, k) => { if (km >= st.km - 0.15) passed = k; });
@@ -169,9 +174,11 @@ export class LiveTracker {
         return;
       }
       if (Math.abs(d) > SWITCH_DELAY && km > 0.3 && km < end - 0.3) {
+        const wasSwitched = this.switched;
         const better = this.otherTrain(li, km, t);
-        if (better) { d = better.delay; }
+        if (better) { d = better.delay; if (justBoarded && li > 0) this.switched = wasSwitched; }  // caught a later/earlier train at the change: normal
       }
+      if (justBoarded && li > 0) { this.delay = d; this.source = 'gps'; this.lastReading = t; return; }
       this.update(d, 'gps', t);
       return;
     }
@@ -179,12 +186,13 @@ export class LiveTracker {
   }
 
   /** The motion sensor saw the train stop (underground, or GPS too weak). */
-  stopped(t: number) {
+  stopped(t: number, sure = false) {
     if (!this.ok) return;
     const L = this.legs[this.onLeg];
+    const waiting = this.riding && this.boardedLeg < this.onLeg && this.lastStation === 0;
     // Trains stop at every station in order: this stop is the next station, or the one after if a stop went unnoticed.
     // still standing at the station we last reached (boarding, or a long stop): nothing new
-    if (t < L.stops[this.lastStation].dep + this.delay + 30) return;
+    if (t < L.stops[this.lastStation].dep + this.delay + 30 && !(sure && waiting)) return;
     // prefer the very next station; take the one after only if the next clearly doesn't fit
     let best: { k: number; gap: number } | null = null;
     for (const k of [this.lastStation + 1, this.lastStation + 2]) {
@@ -192,9 +200,18 @@ export class LiveTracker {
       const gap = Math.abs(t - (L.stops[k].arr + this.delay));
       if (gap <= 150) { best = { k, gap }; break; }
     }
+    // a tap ("doors opened") right after a change, before we knew which train: it can be the train before or after
+    // (motion alone isn't trusted here: standing still on the platform looks like a stop)
+    if (!best && sure && waiting) {
+      for (const off of this.offsets(L)) {
+        const gap = Math.abs(t - (L.stops[1]?.arr ?? Infinity) - off);
+        if (gap <= 90 && (!best || gap < best.gap)) best = { k: 1, gap };
+      }
+    }
     if (!best) return; // doesn't line up with any station: ignore
     this.lastStation = best.k;
     this.boardedLeg = Math.max(this.boardedLeg, this.onLeg);
+    if (waiting) { this.delay = t - L.stops[best.k].arr; this.source = 'motion'; this.lastReading = t; return; }
     this.update(t - L.stops[best.k].arr, 'motion', t);
   }
 
@@ -268,6 +285,16 @@ export class LiveTracker {
       this.lastStation = 0;
       this.delay = next != null ? next - planned : 0;
       this.source = 'timetable';
+      this.switched = false;
+    }
+    // Riding, after a change, nothing says we boarded, and the train we expected has left: we're still on the
+    // platform, so expect the next one (the screen keeps saying where to change and when that train leaves).
+    if (this.riding && this.onLeg > 0 && this.boardedLeg < this.onLeg) {
+      const W = legs[this.onLeg];
+      if (t > W.stops[0].dep + this.delay + 45) {
+        const nd = this.nextDeparture(W, W.stops[0].dep + this.delay + 1);
+        if (nd != null) { this.delay = nd - W.stops[0].dep; this.source = 'timetable'; }
+      }
     }
     const li = this.onLeg, L = legs[li];
     const dd = this.delay;
@@ -291,7 +318,7 @@ export class LiveTracker {
     if (li === legs.length - 1 && t >= arrHere) {
       return { ...base, phase: 'arrived', prev: last.stn, next: null, frac: 1, etas: [], action: null };
     }
-    if (t < first.dep + dd && this.boardedLeg < li) {
+    if (this.boardedLeg < li && (t < first.dep + dd || (this.riding && li > 0 && t <= first.dep + dd + 45))) {
       return { ...base, train: this.trainWhere(t), phase: li === 0 ? 'before' : 'changing', prev: null, next: first.stn, frac: 0, etas: L.stops.map((s) => ({ stn: s.stn, at: s.arr + dd })),
         action: { kind: li === 0 ? 'board' : 'change', at: first.stn, stopsAway: 0, inSec: Math.round(first.dep + dd - t) } };
     }
@@ -306,6 +333,20 @@ export class LiveTracker {
     const stopsAway = L.stops.length - 1 - k;
     const action = { kind: (li === legs.length - 1 ? 'getoff' : 'change') as 'getoff' | 'change', at: last.stn, stopsAway, inSec: Math.round(arrHere - t) };
     return { ...base, phase: 'riding', prev: L.stops[k].stn, next: atStation ? L.stops[k].stn : L.stops[nextK].stn, frac, etas, action };
+  }
+
+  /** Start times of every train that way, as offsets from this ride's planned train (within an hour either side). */
+  private offsets(N: LiveLegPlan): number[] {
+    const out: number[] = [];
+    for (const [pi, t0] of this.tt.departures[this.service] ?? []) {
+      const q = this.tt.patterns[pi];
+      if (q.line !== N.line) continue;
+      const a = q.stops.indexOf(N.from), b = q.stops.indexOf(N.to, a + 1);
+      if (a < 0 || b < 0) continue;
+      const d = t0 + q.dep[a] - N.stops[0].dep;
+      if (Math.abs(d) <= 3600) out.push(d);
+    }
+    return out;
   }
 
   /** Next train of a ride's line and direction leaving its first station at or after `after`. */

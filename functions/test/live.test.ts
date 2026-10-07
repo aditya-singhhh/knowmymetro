@@ -137,3 +137,32 @@ test('a rider report shifts the times; our own GPS wins over it', () => {
   st = lt.status(L.stops[1].arr + 20);
   assert.notEqual(st.source, 'rider');
 });
+
+test('after a change, still on the platform when the planned train leaves: waits for the next one', () => {
+  const o = trip();
+  assert.ok(o.legs.length >= 2, 'trip has a change');
+  const lt = new LiveTracker(tt, service, o.legs);
+  lt.riding = true;
+  const P = lt.legs[1].stops;
+  // first ride on time (GPS), then nothing on the platform
+  const G = lt.legs[0].stops;
+  for (let t = G[0].dep + 60; t < G[G.length - 1].arr; t += 30) { const p = posAt(G, t); lt.fix(t, p.lat, p.lon, 15); }
+  const st = lt.status(P[0].dep + 120);
+  assert.equal(st.phase, 'changing');
+  assert.ok(st.action && st.action.kind === 'change' && st.action.inSec > 0, 'shows when the next train leaves');
+  assert.equal(st.switched, false);
+  // boards that next train: GPS after it leaves puts us on it, without "different train"
+  const next = P[0].dep + st.delay;
+  for (let t = next + 90; t < next + 400; t += 20) { const p = posAt(P, t - st.delay); lt.fix(t, p.lat, p.lon, 15); }
+  const r = lt.status(next + 400);
+  assert.equal(r.phase, 'riding');
+  assert.equal(r.switched, false);
+  assert.ok(Math.abs(r.arrival - st.arrival) < 90, `arrival ${r.arrival} vs ${st.arrival}`);   // on the train it said we'd catch
+});
+
+test('watching (not riding) a train with a change follows the timetable', () => {
+  const o = trip();
+  const lt = new LiveTracker(tt, service, o.legs);
+  const P = lt.legs[1].stops;
+  assert.equal(lt.status(P[0].dep + 120).phase, 'riding');
+});

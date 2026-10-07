@@ -71,6 +71,7 @@ export async function rideTrain(tt: Timetable, id: string, option: PlanOption, d
     date: ymd(date), legs: option.legs.map((l) => ({ line: l.line, from: l.from, to: l.to, origin: l.origin, start: l.start })),
   });
   if (!rec.ok) return 'location';
+  tr.riding = true;
   if (live && live.id !== id) stopLive('user');
   alerted.clear();
   unsub?.();
@@ -152,7 +153,7 @@ function share(st: LiveStatus, now: number) {
 export function doorsOpened() {
   if (!live || live.mode !== 'ride') return;
   const now = secondsNow();
-  live.tracker.stopped(now);
+  live.tracker.stopped(now, true);
   markStation(live.status.next ?? live.status.prev ?? null);
   tick();
 }

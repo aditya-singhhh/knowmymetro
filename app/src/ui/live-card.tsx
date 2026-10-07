@@ -102,7 +102,7 @@ export function LiveCard({ live, onRide, rideMsg, onMissed, onStations }: { live
       </View>
 
       {/* no GPS (underground): one tap at each stop keeps the position right and maps the tunnel */}
-      {!watching && st.phase === 'riding' && st.source !== 'gps' ? (
+      {!watching && (st.phase === 'riding' || st.phase === 'changing') && st.source !== 'gps' ? (
         <Tap onPress={doorsOpened} style={[s.doors, { backgroundColor: c.tintBg }]} accessibilityRole="button">
           <T v="sub" color={c.tint} style={{ fontWeight: '700' }}>{t('doors_btn')}</T>
           <T v="caption" color={c.tint} style={{ fontWeight: '400' }}>{t('doors_hint')}</T>
