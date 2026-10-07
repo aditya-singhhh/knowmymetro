@@ -9,7 +9,7 @@
  */
 import { secondsNow, serviceFor, ymd, LiveTracker, type LiveStatus, type PlanOption, type Timetable } from '@kmm/shared';
 import { track } from './analytics';
-import { getTrainDelay, shareTrainDelay } from './firebase';
+import { getTrainDelay, shareTrainDelay, submitInterchange } from './firebase';
 import { notifyNow } from './notify';
 import { endShare, updateShare } from './share-live';
 import { markStation, onSample, startRecording, stopRecording, uploadPendingRecordings } from './recorder';
@@ -80,6 +80,7 @@ export async function rideTrain(tt: Timetable, id: string, option: PlanOption, d
     if (s.k === 'gps') live.tracker.fix(secondsNow(new Date(s.t)), s.lat, s.lon, s.acc ?? 999);
     else if (s.k === 'evt' && s.e === 'train_stopped') live.tracker.stopped(secondsNow(new Date(s.t)));
     else if (s.k === 'evt' && s.e === 'train_started') live.tracker.started(secondsNow(new Date(s.t)));
+    else if (s.k === 'evt' && (s.e === 'walk_start' || s.e === 'walk_end')) { live.tracker.walking(secondsNow(new Date(s.t)), s.e === 'walk_start'); learnChange(); }
     // timers pause when the app is in the background; readings keep coming, so update from them too
     if (Date.now() - lastTick >= 3000) tick();
   });
@@ -119,6 +120,21 @@ function tick() {
   if (st.phase === 'arrived' && now - st.arrival > 60) {
     if (live.mode === 'ride') stopLive('arrived'); else { end(); emit(); }
   }
+}
+
+/** A change we timed by walking (off the train -> standing on the next platform): teaches the planner real change times. */
+let sentChange: string | null = null;
+function learnChange() {
+  const c = live?.tracker.change;
+  if (!c || !live) return;
+  const id = `${live.id}|${c.station}|${c.seconds}`;
+  if (sentChange === id) return;
+  sentChange = id;
+  const prev = live.option.legs.find((l) => l.to === c.station && l.line === c.fromLine);
+  if (!prev) return;
+  const minutes = Math.round((c.seconds / 60) * 10) / 10;
+  submitInterchange(`${c.station}|${c.fromLine}${prev.dir}>${c.toLine}`, null, minutes).catch(() => undefined);
+  track('change_timed', { station: c.station, minutes });
 }
 
 /** Every 30 s: did a rider on this train share how late it is? */

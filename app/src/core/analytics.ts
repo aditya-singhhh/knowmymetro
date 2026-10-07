@@ -22,6 +22,7 @@ export type AppEvent =
   | 'recording_uploaded' // samples, minutes
   | 'live_started'       // rides
   | 'live_ended'         // reason, delay, source
+  | 'change_timed'       // station, minutes (walk off one train to standing on the next platform)
   | 'reminder_set';      // minutes
 
 export function track(event: AppEvent, params: Params = {}) {

@@ -36,6 +36,8 @@ export interface MotionSecond {
   along: number | null;
   /** estimated speed from motion, km/h (null when unknown) */
   kmh: number | null;
+  /** walking (strong, steady shaking for most of the last 20 s: getting off, changing platforms) */
+  walking: boolean;
 }
 
 export interface Reading {
@@ -65,6 +67,10 @@ export const MOTION = {
   dwellPush: 0.1,      // m/s^2
   dwellTurn: 12,       // deg/s
   dwellSeconds: 6,
+  // Walking: shake above 1.5 m/s^2 in 12 of the last 20 s (checked on 6-7 Oct rides: Majestic changes 4-20 of 20,
+  // riding at most 9 of 20, even with the phone in hand).
+  walkShake: 1.5,
+  walkOf20: 12,
   push: 0.3,           // m/s^2: steady level push above this = speeding up or braking
   pushSeconds: 3,
   maxKmh: 90,
@@ -80,6 +86,7 @@ export class MotionTracker {
   /** true from a stop until the phone is handled (so "forward" can be learned from the next push) */
   private atStop = false;
   private lastT = 0;
+  private shakes: number[] = [];
 
   push(r: Reading) { this.buf.push(r); }
 
@@ -103,13 +110,15 @@ export class MotionTracker {
 
     const dt = this.lastT ? Math.min(3, Math.max(0.2, (t - this.lastT) / 1000)) : 1;
     this.lastT = t;
+    this.shakes.push(j);
+    if (this.shakes.length > 20) this.shakes.shift();
     this.recent.push({ h: hv, j, r: rot });
     if (this.recent.length > 10) this.recent.shift();
     this.update(hv, j, rot, dt);
 
     return {
       t, a: r3(a), g: r3(g), h: round(h, 3), v: round(v, 3), j: round(j, 3), r: round(rot, 1),
-      state: this.state, dwell: this.dwell(), along: this.forward ? round(dot(hv, this.forward), 3) : null, kmh: this.speed == null ? null : Math.round(this.speed * 3.6),
+      state: this.state, dwell: this.dwell(), walking: this.shakes.length >= 15 && this.shakes.filter((x) => x > MOTION.walkShake).length >= MOTION.walkOf20, along: this.forward ? round(dot(hv, this.forward), 3) : null, kmh: this.speed == null ? null : Math.round(this.speed * 3.6),
     };
   }
 

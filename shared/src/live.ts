@@ -141,6 +141,8 @@ export class LiveTracker {
   private identify = -1;
   private lastStationAt: number | null = null;
   private lastStart: number | null = null;
+  private arrivedAt: number | null = null;
+  private walk: { from: number; to: number | null; offTrain: boolean } | null = null;
   /** last good GPS position along the current ride (km from its first station) */
   private pos: { t: number; km: number; li: number } | null = null;
   /** furthest point shown on each ride (half-steps), so the display never goes backwards */
@@ -275,6 +277,61 @@ export class LiveTracker {
     this.update(t - L.stops[best.k].arr, 'motion', t);
   }
 
+  /** We're off this ride at the change station (arrived at `arrived`): expect the first train we can make. */
+  private advance(arrived: number) {
+    const N = this.legs[this.onLeg + 1];
+    if (!N) return;
+    const planned = N.stops[0].dep;
+    const quick = Math.min(this.changeNeed, 120);   // brisk walk; if we miss it we roll to the next train anyway
+    const next = arrived + quick > planned ? this.nextDeparture(N, arrived + quick) : planned;
+    this.arrivedAt = arrived;
+    this.walk = null;
+    this.onLeg++;
+    this.lastStation = 0;
+    this.platformAt = arrived + 60;
+    this.delay = next != null ? next - planned : 0;
+    this.source = 'timetable';
+    this.switched = false;
+  }
+
+  /** The phone started or stopped walking (getting off, changing platforms). Pauses under a minute (escalators,
+   *  stairs, crowds) are part of the same walk. */
+  walking(t: number, on: boolean) {
+    if (!this.ok || !this.riding) return;
+    const L = this.legs[this.onLeg];
+    const end = L.stops[L.stops.length - 1];
+    if (on) {
+      // walking off the train near the change station: we've arrived there (underground too)
+      if (this.onLeg + 1 < this.legs.length && this.boardedLeg >= this.onLeg && t >= end.arr + this.delay - 300) {
+        this.prog = { li: this.onLeg, step: 2 * (L.stops.length - 1) };
+        this.advance(t - 15);
+        this.walk = { from: t - 15, to: null, offTrain: true };
+      } else if (this.onLeg > 0 && this.boardedLeg < this.onLeg && this.arrivedAt != null) {
+        if (!this.walk && t - this.arrivedAt < 120) this.walk = { from: t, to: null, offTrain: false };   // the clock had already moved us to the change
+        else if (this.walk?.to != null && t - this.walk.to < 60) this.walk.to = null;     // short pause: same walk
+      }
+      return;
+    }
+    // stopped walking after a change, not on the train yet: on the platform now, so the next train is the first one
+    // leaving from now on, and this change took this long (worth learning)
+    if (this.onLeg > 0 && this.boardedLeg < this.onLeg && this.walk && this.walk.to == null) {
+      this.walk.to = t;
+      this.platformAt = t;
+      const prev = this.legs[this.onLeg - 1];
+      const secs = Math.round(t - this.walk.from);
+      // only learn when we saw the walk start as we got off (otherwise the start time is a guess)
+      if (this.walk.offTrain && secs > 30 && secs < 900) this.change = { station: L.from, fromLine: prev.line, toLine: L.line, from: prev.stops[prev.stops.length - 1].stn, seconds: secs };
+      const W = L.stops[0];
+      if (W.dep + this.delay < t - 30) {
+        const nd = this.nextDeparture(L, t - 30);
+        if (nd != null) { this.delay = nd - W.dep; this.source = 'timetable'; }
+      }
+    }
+  }
+
+  /** The last change we measured (from walking off the train to standing on the next platform). */
+  change: { station: string; fromLine: string; toLine: string; from: string; seconds: number } | null = null;
+
   /** The motion sensor felt the train pull away from a stop. */
   started(t: number) { this.lastStart = t; }
 
@@ -359,19 +416,7 @@ export class LiveTracker {
     // No reading says otherwise: once this ride is over by the clock, we're at the change for the next one.
     // If the connection is missed, expect the next train that way instead (shown as an offset from the plan).
     const cur = legs[this.onLeg];
-    if (this.onLeg + 1 < legs.length && t > cur.stops[cur.stops.length - 1].arr + this.delay + 30) {
-      const arrived = cur.stops[cur.stops.length - 1].arr + this.delay;
-      const N = legs[this.onLeg + 1];
-      const planned = N.stops[0].dep;
-      const quick = Math.min(this.changeNeed, 120);   // brisk walk; if we miss it we roll to the next train anyway
-      const next = arrived + quick > planned ? this.nextDeparture(N, arrived + quick) : planned;
-      this.onLeg++;
-      this.lastStation = 0;
-      this.platformAt = arrived + 60;
-      this.delay = next != null ? next - planned : 0;
-      this.source = 'timetable';
-      this.switched = false;
-    }
+    if (this.onLeg + 1 < legs.length && t > cur.stops[cur.stops.length - 1].arr + this.delay + 30) this.advance(cur.stops[cur.stops.length - 1].arr + this.delay);
     // Riding, after a change, nothing says we boarded, and the train we expected has left: we're still on the
     // platform, so expect the next one (the screen keeps saying where to change and when that train leaves).
     if (this.riding && this.onLeg > 0 && this.boardedLeg < this.onLeg) {
@@ -424,8 +469,9 @@ export class LiveTracker {
       const z = L.stops.findIndex((st) => Math.abs(st.km - P.km) <= (this.prog.li === li && this.prog.step === 2 * L.stops.indexOf(st) ? 0.2 : 0.12));
       let g = 0; while (g + 1 < L.stops.length && L.stops[g + 1].km <= P.km) g++;
       const gps = z >= 0 ? 2 * z : 2 * g + 1;
-      // at a station by GPS: stay there until a fix shows we left (the train stands longer than the timetable says)
-      step = gps % 2 === 0 ? gps : Math.min(Math.max(step, gps), gps + 1);
+      // at a station by a fresh fix (30 s): we're there. With an older fix (GPS comes about once a minute in the
+      // background) the clock may move us on, but only to the next stretch/station, never further.
+      step = gps % 2 === 0 && t - P.t <= 30 ? gps : Math.min(Math.max(step, gps), gps + 1);
     }
     if (this.prog.li === li) step = Math.max(step, this.prog.step);
     step = Math.min(step, 2 * (L.stops.length - 1));

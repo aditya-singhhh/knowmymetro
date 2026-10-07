@@ -52,7 +52,7 @@ export type Sample =
   | { t: number; k: 'cell'; c: Cell[] }
   | { t: number; k: 'mot'; m: number; sd: number }   // older recordings (shake only)
   | { t: number; k: 'dm'; a: number[]; g: number[]; h: number; v: number; j: number; r: number; s: TrainState; kmh: number | null }
-  | { t: number; k: 'evt'; e: 'train_stopped' | 'train_started' | 'auto_stop'; why?: string }
+  | { t: number; k: 'evt'; e: 'train_stopped' | 'train_started' | 'walk_start' | 'walk_end' | 'auto_stop'; why?: string }
   | { t: number; k: 'bar'; p: number }
   | { t: number; k: 'mark'; station: string | null };
 
@@ -203,6 +203,7 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
     stops.push(() => acc.remove());
   }
   let lastBeat = Date.now(), lastSave = Date.now();
+  let walking = false, lastWalk = 0;
   heartbeat = () => {
     const now = Date.now();
     if (now - lastBeat < 1000) return;
@@ -217,6 +218,9 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
         if (sec.dwell && !lastDwell && now - lastStopEvt > 40000) { push({ t: now, k: 'evt', e: 'train_stopped' }); stats.stops++; lastStopEvt = now; }
         lastDwell = sec.dwell;
         if (sec.state === 'starting' && last === 'stopped') push({ t: now, k: 'evt', e: 'train_started' });
+        // walking: getting off, changing platforms (ends after 10 s without it)
+        if (sec.walking) { if (!walking) { walking = true; push({ t: now - 10000, k: 'evt', e: 'walk_start' }); } lastWalk = now; }
+        else if (walking && now - lastWalk > 10000) { walking = false; push({ t: lastWalk, k: 'evt', e: 'walk_end' }); }
         last = sec.state;
         stats.train = sec.state;
         stats.motion = { h: sec.h, v: sec.v, j: sec.j, r: sec.r, along: sec.along };
