@@ -166,3 +166,17 @@ test('watching (not riding) a train with a change follows the timetable', () => 
   const P = lt.legs[1].stops;
   assert.equal(lt.status(P[0].dep + 120).phase, 'riding');
 });
+
+test('one odd GPS fix far from the plan does not change the train', () => {
+  const o = trip();
+  const lt = new LiveTracker(tt, service, o.legs);
+  const stops = lt.legs[0].stops;
+  const start = lt.legs[0].start;
+  for (let t = stops[0].dep + 60; t < stops[0].dep + 400; t += 20) { const p = posAt(stops, t); lt.fix(t, p.lat, p.lon, 15); }
+  // one reading where the next train would be (as if 6 min behind)
+  const t1 = stops[0].dep + 420, p1 = posAt(stops, t1 - 360); lt.fix(t1, p1.lat, p1.lon, 30);
+  for (let t = t1 + 20; t < t1 + 200; t += 20) { const p = posAt(stops, t); lt.fix(t, p.lat, p.lon, 15); }
+  const st = lt.status(t1 + 200);
+  assert.equal(st.switched, false);
+  assert.equal(lt.legs[0].start, start);
+});

@@ -135,6 +135,7 @@ export class LiveTracker {
   /** Riding (not just watching): until a reading shows we boarded a ride after a change, a planned train that has
    *  left without us means we're still on the platform, waiting for the next one. */
   riding = false;
+  private vote: { key: string; n: number; since: number } | null = null;
 
   constructor(private tt: Timetable, private service: string, legs: Leg[], private changeNeed = 180) {
     this.legs = legs.map((l) => legPlan(tt, service, l)).filter((x): x is LiveLegPlan => !!x);
@@ -173,12 +174,23 @@ export class LiveTracker {
         this.source = 'gps'; this.lastReading = t;
         return;
       }
-      if (Math.abs(d) > SWITCH_DELAY && km > 0.3 && km < end - 0.3) {
-        const wasSwitched = this.switched;
-        const better = this.otherTrain(li, km, t);
-        if (better) { d = better.delay; if (justBoarded && li > 0) this.switched = wasSwitched; }  // caught a later/earlier train at the change: normal
+      if (justBoarded && li > 0) {
+        // just got on after a change: which train is it? Trains can be 3 min apart here, so take the one that fits
+        // a good fix best, and don't call it "a different train" (catching the next one is normal)
+        if (Math.abs(d) > 90 && accuracy <= 60) { const c = this.candidate(li, km, t, 120); if (c) { this.useTrain(li, c); d = c.delay; } }
+        this.switched = false; this.vote = null;
+        this.delay = d; this.source = 'gps'; this.lastReading = t;
+        return;
       }
-      if (justBoarded && li > 0) { this.delay = d; this.source = 'gps'; this.lastReading = t; return; }
+      // Far off the plan: a late train, or another train? Only switch on steady evidence (3 good fixes over 45 s all
+      // fitting the same other train); one odd fix near a tunnel or a late-running train must not change the train.
+      if (Math.abs(d) > SWITCH_DELAY && km > 0.3 && km < end - 0.3 && accuracy <= 60) {
+        const c = this.candidate(li, km, t, 150);
+        const key = c ? `${c.pattern}|${c.t0}` : null;
+        if (key && this.vote?.key === key) this.vote.n++;
+        else this.vote = key ? { key, n: 1, since: t } : null;
+        if (c && this.vote && this.vote.n >= 3 && t - this.vote.since >= 45) { this.useTrain(li, c); this.switched = true; this.vote = null; d = c.delay; this.delay = d; this.source = 'gps'; this.lastReading = t; return; }
+      } else this.vote = null;
       this.update(d, 'gps', t);
       return;
     }
@@ -246,29 +258,29 @@ export class LiveTracker {
     this.lastReading = t;
   }
 
-  /** Another train of the same line and direction that fits this reading much better. */
-  private otherTrain(li: number, km: number, t: number): { delay: number } | null {
+  /** The train of this line and direction that best fits a reading (within maxGap s); a train with the same end
+   *  station as the current one wins a near tie (a train running late is likelier than a timetable mix-up). */
+  private candidate(li: number, km: number, t: number, maxGap: number): { t0: number; pattern: number; delay: number; a: number; b: number } | null {
     const L = this.legs[li];
-    const p = this.tt.patterns[L.pattern];
-    const a = p.stops.indexOf(L.from), b = p.stops.indexOf(L.to, a + 1);
-    let best: { t0: number; pattern: number; delay: number; a: number; b: number } | null = null;
+    const term = L.stops.length ? this.tt.patterns[L.pattern].stops.at(-1) : null;
+    let best: { t0: number; pattern: number; delay: number; a: number; b: number; score: number } | null = null;
     for (const [pi, t0] of this.tt.departures[this.service] ?? []) {
       const q = this.tt.patterns[pi];
       if (q.line !== L.line) continue;
       const qa = q.stops.indexOf(L.from), qb = q.stops.indexOf(L.to, qa + 1);
       if (qa < 0 || qb < 0) continue;
-      const stops = stopsOf(this.tt, pi, t0, qa, qb);
-      const d = delayAt(stops, km, t);
-      if (d == null || Math.abs(d) > 150) continue;
-      if (!best || Math.abs(d) < Math.abs(best.delay)) best = { t0, pattern: pi, delay: d, a: qa, b: qb };
+      const d = delayAt(stopsOf(this.tt, pi, t0, qa, qb), km, t);
+      if (d == null || Math.abs(d) > maxGap) continue;
+      const score = Math.abs(d) - (q.stops.at(-1) === term ? 60 : 0);
+      if (!best || score < best.score) best = { t0, pattern: pi, delay: d, a: qa, b: qb, score };
     }
-    if (!best) return null;
-    const q = this.tt.patterns[best.pattern];
-    this.legs[li] = { ...L, pattern: best.pattern, start: best.t0, origin: q.stops[0], terminus: q.stops[q.stops.length - 1], held: 0,
-      stops: stopsOf(this.tt, best.pattern, best.t0, best.a, best.b) };
-    this.switched = true;
-    this.delay = best.delay;
-    return { delay: best.delay };
+    return best;
+  }
+
+  private useTrain(li: number, c: { t0: number; pattern: number; a: number; b: number }) {
+    const L = this.legs[li], q = this.tt.patterns[c.pattern];
+    this.legs[li] = { ...L, pattern: c.pattern, start: c.t0, origin: q.stops[0], terminus: q.stops[q.stops.length - 1], held: 0,
+      stops: stopsOf(this.tt, c.pattern, c.t0, c.a, c.b) };
   }
 
   status(t: number): LiveStatus {
