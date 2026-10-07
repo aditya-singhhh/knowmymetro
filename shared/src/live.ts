@@ -141,6 +141,7 @@ export class LiveTracker {
   private identify = -1;
   private lastStationAt: number | null = null;
   private lastStart: number | null = null;
+  private lastFixT: number | null = null;
   private arrivedAt: number | null = null;
   private walk: { from: number; to: number | null; offTrain: boolean } | null = null;
   /** last good GPS position along the current ride (km from its first station) */
@@ -157,6 +158,9 @@ export class LiveTracker {
   /** A GPS fix. */
   fix(t: number, lat: number, lon: number, accuracy: number) {
     if (!this.ok || accuracy > 150) return;
+    // fixes can arrive late in a batch: one older than what we already used tells us nothing new
+    if (this.lastFixT != null && t <= this.lastFixT) return;
+    this.lastFixT = t;
     // which ride does this fix belong to: the current one, or the next (after a change)
     for (const li of [this.onLeg, this.onLeg + 1]) {
       const L = this.legs[li];

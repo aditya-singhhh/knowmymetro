@@ -133,7 +133,12 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
   await activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => undefined);
 
   // GPS
+  const seenFix = new Set<number>();
   fixHandler = (p) => {
+    // the same fix can come from both the on-screen watcher and the background task
+    if (seenFix.has(p.timestamp)) return;
+    seenFix.add(p.timestamp);
+    if (seenFix.size > 500) seenFix.clear();
     push({ t: p.timestamp, k: 'gps', lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy ?? null, spd: p.coords.speed ?? null, alt: p.coords.altitude ?? null });
     stats.gpsFixes++; stats.lastAccuracy = p.coords.accuracy ?? null; stats.lastFix = { lat: p.coords.latitude, lon: p.coords.longitude };
     if (p.coords.speed != null && p.coords.speed >= 0 && (p.coords.accuracy ?? 999) < 50) {
@@ -157,7 +162,9 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
       stops.push(() => { Location.stopLocationUpdatesAsync(GPS_TASK).catch(() => undefined); });
     } catch { /* fall back to on-screen only */ }
   }
-  if (!background) {
+  // Also watch on screen: the background task gets fixes in batches (about once a minute), so with the app open
+  // this gives each fix as it comes. Without background capture this is the only source.
+  {
     const gps = await Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 2000, distanceInterval: 0 }, (p) => fixHandler?.(p));
     stops.push(() => gps.remove());
   }
