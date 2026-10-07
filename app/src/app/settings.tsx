@@ -12,6 +12,9 @@ import { space, useTheme } from '@/ui/theme';
 
 export default function Settings() {
   const { t, lang, setLang, prefs, setPrefs, tt } = useApp();
+  // 7 taps on the timetable version: developer tools on/off (not advertised)
+  const [taps, setTaps] = useState(0);
+  const devTap = () => { const n = taps + 1; setTaps(n >= 7 ? 0 : n); if (n >= 7) setPrefs({ dev: !prefs.dev }); };
   const { c } = useTheme();
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
 
@@ -59,21 +62,23 @@ export default function Settings() {
             options={[{ value: '0', label: t('off') }, { value: '5', label: `5 ${t('min')}` }, { value: '10', label: `10 ${t('min')}` }, { value: '15', label: `15 ${t('min')}` }]} />
         </View>
 
-        <View style={{ gap: space.s }}>
-          <T v="caption" color={c.ink2} style={s.label}>Beta</T>
-          <Card padded={false}>
-            <Tap onPress={() => { router.back(); router.push('/recorder'); }} style={s.row}>
-              <View style={{ flex: 1 }}><T v="body">Trip recorder</T><T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>Record GPS, towers and motion on your ride to improve live tracking</T></View>
-              <T v="headline" color={c.ink3}>›</T>
-            </Tap>
-          </Card>
-        </View>
+        {prefs.dev ? (
+          <View style={{ gap: space.s }}>
+            <T v="caption" color={c.ink2} style={s.label}>Developer</T>
+            <Card padded={false}>
+              <Tap onPress={() => { router.back(); router.push('/recorder'); }} style={s.row}>
+                <View style={{ flex: 1 }}><T v="body">Trip recorder</T><T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>Record GPS, towers and motion on your ride to improve live tracking</T></View>
+                <T v="headline" color={c.ink3}>›</T>
+              </Tap>
+            </Card>
+          </View>
+        ) : null}
 
         <View style={{ gap: space.s }}>
           <T v="caption" color={c.ink2} style={s.label}>{t('about')}</T>
           <Card padded={false}>
             <View style={s.row}><T v="body">{t('version', { v: `${Application.nativeApplicationVersion ?? '1.0.0'} (${Application.nativeBuildVersion ?? 'dev'})` })}</T></View>
-            <View style={[s.row, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}><T v="body">{t('timetable_v', { v: tt.version })}</T></View>
+            <Tap onPress={devTap} style={[s.row, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}><T v="body">{t('timetable_v', { v: tt.version })}</T></Tap>
             <Tap onPress={checkUpdates} style={[s.row, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.sep }]}>
               <T v="body" color={c.tint}>{t('check_updates')}</T>
               {updateMsg ? <T v="caption" color={c.ink2}>{updateMsg}</T> : null}

@@ -11,7 +11,7 @@ import { checkForNewTimetable, loadTimetable } from './timetable';
 
 export interface Commute { from: string; to: string; time: string; mode: TimeMode; priority: Priority }
 /** remind: minutes before the commute train to send a reminder (0 = off) */
-export interface Prefs { women: boolean; pace: Pace; remind?: number }
+export interface Prefs { women: boolean; pace: Pace; remind?: number; /** hidden developer tools (trip recorder, sensor details) */ dev?: boolean }
 
 interface AppCtx {
   tt: Timetable;
