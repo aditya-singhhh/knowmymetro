@@ -129,7 +129,7 @@ export function submitInterchange(key: string, coach: 'front' | 'middle' | 'rear
  * Trip recorder upload: one summary document plus size-limited chunks
  * (recordings/{uid_id} and recordings/{uid_id}/chunks/{n}). Create-only for the owner.
  */
-export function uploadRecording(rec: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[]; stopReason?: string; trip?: unknown }) {
+export function uploadRecording(rec: { id: string; startedAt: number; endedAt: number | null; platform: string; samples: unknown[]; stopReason?: string; trip?: unknown; trips?: unknown[] }) {
   return asUser(async (uid) => {
     const db = getFirestore();
     const recId = `${uid}_${rec.id}`;
@@ -152,7 +152,7 @@ export function uploadRecording(rec: { id: string; startedAt: number; endedAt: n
     }
     await setDoc(doc(db, `recordings/${recId}`), {
       uid, startedAt: rec.startedAt, endedAt: rec.endedAt, platform: rec.platform, samples: rec.samples.length, chunks: chunks.length, kinds,
-      stopReason: rec.stopReason ?? 'user', ...(rec.trip ? { trip: rec.trip } : {}), createdAt: serverTimestamp(),
+      stopReason: rec.stopReason ?? 'user', ...(rec.trip ? { trip: rec.trip } : {}), ...(rec.trips?.length ? { trips: rec.trips } : {}), createdAt: serverTimestamp(),
     });
   });
 }

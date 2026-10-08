@@ -40,7 +40,7 @@ service cloud.firestore {
       allow create, update: if signedIn()
         && id.matches(request.auth.uid + '_[0-9]+')
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasOnly(['uid', 'startedAt', 'endedAt', 'platform', 'samples', 'chunks', 'kinds', 'stopReason', 'trip', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'startedAt', 'endedAt', 'platform', 'samples', 'chunks', 'kinds', 'stopReason', 'trip', 'trips', 'createdAt'])
         && request.resource.data.createdAt == request.time;
       match /chunks/{n} {
         allow create, update: if signedIn()

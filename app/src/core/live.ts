@@ -67,12 +67,18 @@ export async function rideTrain(tt: Timetable, id: string, option: PlanOption, d
   if (live?.id === id && live.mode === 'ride') return 'ok';
   const tr = live?.id === id ? live.tracker : tracker(tt, option, date);   // keep what watching already learned
   if (!tr) return 'unsupported';
+  // Switching to another train mid-journey (e.g. re-planned at Majestic): close the old ride but keep the same
+  // recording going. (Before, the old ride's End stopped the recording the new ride had just joined: 8 Oct lost
+  // 19 minutes and the new ride had no GPS.)
+  if (live && live.id !== id) {
+    if (live.mode === 'ride') { endShare(timetable, live); track('live_ended', { reason: 'switched', delay: live.status.delay, source: live.status.source }); }
+    end();
+  }
   const rec = await startRecording(tt, {
     date: ymd(date), legs: option.legs.map((l) => ({ line: l.line, from: l.from, to: l.to, origin: l.origin, start: l.start })),
   });
   if (!rec.ok) return 'location';
   tr.riding = true;
-  if (live && live.id !== id) stopLive('user');
   alerted.clear();
   unsub?.();
   unsub = onSample((s) => {

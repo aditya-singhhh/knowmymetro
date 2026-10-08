@@ -76,7 +76,7 @@ async function main() {
       else if (kmh < 1 && wasMoving) { still += (g.t - gps[i - 1].t) / 1000; if (still >= 15) { gpsStops++; wasMoving = false; still = 0; } }
     }
 
-    writeFileSync(`reports/series/${n}.trip.json`, JSON.stringify({ startedAt: m.startedAt, endedAt: m.endedAt, trip: m.trip ?? null, stopReason: m.stopReason ?? null }));
+    writeFileSync(`reports/series/${n}.trip.json`, JSON.stringify({ startedAt: m.startedAt, endedAt: m.endedAt, trip: m.trip ?? null, trips: m.trips ?? null, stopReason: m.stopReason ?? null }));
     out.push(`## ${n}. ${ist(m.startedAt)} IST · ${r1(dur)} min · stop: ${m.stopReason ?? '—'} · ${m.platform}${m.trip ? ` · live trip ${m.trip.legs.map((l: S) => `${l.from}>${l.to}`).join(', ')}` : ''}`,
       `- samples: ${samples.length} (${Object.entries({ gps: gps.length, cell: cell.length, dm: dm.length, mot: mot.length, evt: evt.length, mark: mark.length, bar: bar.length }).map(([k, v]) => `${k} ${v}`).join(', ')})`,
       `- GPS: median accuracy ${r1(pct(acc, 0.5))} m, p90 ${r1(pct(acc, 0.9))} m, longest gap ${r1(maxGap)} s, minutes with a fix ${minutesWithFix}/${Math.ceil(dur)}`,

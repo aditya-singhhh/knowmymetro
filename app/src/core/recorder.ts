@@ -63,6 +63,8 @@ export interface Recording {
   platform: string;
   samples: Sample[];
   stopReason?: 'user' | 'left_line' | 'never_on_line' | 'too_long' | 'recovered' | 'arrived';
+  /** earlier trips in this recording, when the rider switched trains mid-journey (until `at`) */
+  trips?: { at: number; trip: NonNullable<Recording['trip']> }[];
   /** set when recorded as part of a live trip: the planned rides */
   trip?: { date: string; legs: { line: string; from: string; to: string; origin: string; start: number }[] };
 }
@@ -123,7 +125,11 @@ export const onStats = (fn: ((s: LiveStats) => void) | null) => { listener = fn;
 export const onRecordingState = (fn: typeof stateListener) => { stateListener = fn; };
 
 export async function startRecording(tt: Timetable, trip?: Recording['trip']): Promise<{ ok: true } | { ok: false; reason: 'location' }> {
-  if (current) { if (trip) current.trip = trip; return { ok: true }; }
+  if (current) {
+    // a new ride joins the running recording: keep every trip it covered, latest first in `trip`
+    if (trip) { if (current.trip && JSON.stringify(current.trip) !== JSON.stringify(trip)) current.trips = [...(current.trips ?? []), { at: Date.now(), trip: current.trip }]; current.trip = trip; }
+    return { ok: true };
+  }
   const perm = await Location.requestForegroundPermissionsAsync();
   if (perm.status !== 'granted') return { ok: false, reason: 'location' };
 
