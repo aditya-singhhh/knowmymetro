@@ -139,7 +139,7 @@ export function LiveCard({ live, onRide, rideMsg, onMissed, onStations }: { live
             <T v="caption" color={c.ink2} style={{ fontWeight: '400' }}>{t('then_line', { line: lineName(legs[st.leg + 1].line), s: nm(legs[st.leg + 1].to) })}</T>
           ) : null}
         </View>
-        {!watching ? <Tap onPress={() => stopLive('user')} hitSlop={10}><T v="sub" color={c.tint} style={{ fontWeight: '600' }}>{t('live_end')}</T></Tap> : null}
+        {!watching ? <EndButton /> : null}
       </View>
 
       {watching && st.phase !== 'arrived' ? (
@@ -150,6 +150,19 @@ export function LiveCard({ live, onRide, rideMsg, onMissed, onStations }: { live
         </View>
       ) : null}
     </Card>
+  );
+}
+
+/** Ending a ride takes two taps (a phone in a pocket or hand can tap once by accident and lose the ride). */
+function EndButton() {
+  const { t } = useApp();
+  const { c } = useTheme();
+  const [armed, setArmed] = useState(false);
+  useEffect(() => { if (!armed) return; const id = setTimeout(() => setArmed(false), 4000); return () => clearTimeout(id); }, [armed]);
+  return (
+    <Tap onPress={() => (armed ? stopLive('user') : setArmed(true))} hitSlop={10} accessibilityRole="button">
+      <T v="sub" color={armed ? c.bad : c.tint} style={{ fontWeight: '600' }}>{armed ? t('live_end_confirm') : t('live_end')}</T>
+    </Tap>
   );
 }
 

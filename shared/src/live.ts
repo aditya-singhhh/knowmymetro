@@ -283,11 +283,13 @@ export class LiveTracker {
       // with several trains a few minutes apart more than one station fits; we board the train that leaves right
       // after we last walked (onto it), so prefer the station whose implied departure is closest to that
       let score = Infinity;
-      for (let k = 1; k <= (sure ? Math.min(4, L.stops.length - 1) : 1); k++) {
-        const left = t - (L.stops[k].arr - L.stops[0].dep);
+      // k = 0: the tap was the doors of the train we're boarding, here (8 Oct: a tap at Majestic was read as a
+      // stop three stations on, and the card jumped ahead)
+      for (let k = sure ? 0 : 1; k <= (sure ? Math.min(4, L.stops.length - 1) : 1); k++) {
+        const left = k === 0 ? t : t - (L.stops[k].arr - L.stops[0].dep);
         for (const off of this.offsets(L)) {
-          const gap = Math.abs(t - L.stops[k].arr - off);
-          if (gap > 90) continue;
+          const gap = k === 0 ? Math.abs(t + 30 - L.stops[0].dep - off) : Math.abs(t - L.stops[k].arr - off);
+          if (gap > (k === 0 ? 120 : 90)) continue;
           const sc = this.lastWalkEnd != null && left >= this.lastWalkEnd - 60 ? Math.abs(left - this.lastWalkEnd) : this.lastWalkEnd != null ? 1e6 + gap : gap;
           if (sc < score) { score = sc; best = { k, gap }; }
         }
@@ -300,7 +302,7 @@ export class LiveTracker {
     // the screen shows this station now (never behind it)
     if (this.prog.li !== this.onLeg || this.prog.step < 2 * best.k) this.prog = { li: this.onLeg, step: 2 * best.k };
     // a tap is certain and the train is at the station now: take its delay as is
-    if (waiting || sure) { this.delay = t - L.stops[best.k].arr; this.source = 'motion'; this.lastReading = t; return; }
+    if (waiting || sure) { this.delay = best.k === 0 ? t + 30 - L.stops[0].dep : t - L.stops[best.k].arr; this.source = 'motion'; this.lastReading = t; return; }
     this.update(t - L.stops[best.k].arr, 'motion', t);
   }
 

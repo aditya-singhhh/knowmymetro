@@ -192,3 +192,18 @@ test('standing at a station longer than the timetable says: still "at" it, and l
   assert.equal(st.next, stops[2].stn, 'at the station, not next one');
   assert.ok(st.delay >= 50, `delay ${st.delay}`);
 });
+
+test('a door tap on the platform after a change means boarding here, not a stop further on', () => {
+  const o = trip();
+  const lt = new LiveTracker(tt, service, o.legs);
+  lt.riding = true;
+  const G = lt.legs[0].stops, P = lt.legs[1].stops;
+  for (let t = G[0].dep + 60; t < G[G.length - 1].arr; t += 30) { const p = posAt(G, t); lt.fix(t, p.lat, p.lon, 15); }
+  const off = G[G.length - 1].arr + 10;
+  lt.walking(off, true); lt.walking(off + 150, false);              // got off, walked to the other platform
+  lt.status(off + 160);
+  const dep = P[0].dep + lt.status(off + 170).delay;                // the train the app expects
+  lt.stopped(dep - 40, true);                                       // doors of that train open here
+  const st = lt.status(dep - 30);
+  assert.equal(st.prev ?? st.next, P[0].stn, `shows ${st.phase} ${st.prev}/${st.next}`);
+});
