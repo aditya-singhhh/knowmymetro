@@ -80,6 +80,8 @@ export interface LiveStats {
   marks: number;
   /** motion-detected station stops */
   stops: number;
+  /** motion readings stopped changing (sensors paused with the screen off) */
+  motionFrozen?: boolean;
   lastFix: { lat: number; lon: number } | null;
   /** metres from the nearest metro line at the last GPS fix */
   fromLine: number | null;
@@ -211,6 +213,7 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
   }
   let lastBeat = Date.now(), lastSave = Date.now();
   let walking = false, lastWalk = 0;
+  let frozen = 0, lastSig = '';
   heartbeat = () => {
     const now = Date.now();
     if (now - lastBeat < 1000) return;
@@ -219,7 +222,14 @@ export async function startRecording(tt: Timetable, trip?: Recording['trip']): P
     if (now - lastSave >= 60000 && current) { lastSave = now; savePending(current); }
     if (useDeviceMotion) {
       const sec = tracker.second(now);
-      if (sec) {
+      // Some phones keep repeating the last motion reading when the screen is off (sensors paused in the background):
+      // identical seconds are not "standing still", so don't count stops or walks from them (8 Oct: 16 min frozen).
+      const sig = sec ? `${sec.a.join()}|${sec.g.join()}` : '';
+      frozen = sec != null && sig === lastSig ? frozen + 1 : 0;
+      lastSig = sig;
+      if (sec && frozen >= 3) { stats.motionFrozen = true; }
+      else if (sec) {
+        stats.motionFrozen = false;
         push({ t: now, k: 'dm', a: sec.a, g: sec.g, h: sec.h, v: sec.v, j: sec.j, r: sec.r, s: sec.state, kmh: sec.kmh });
         // a station stop: the train came to rest (at most one per 40 s)
         if (sec.dwell && !lastDwell && now - lastStopEvt > 40000) { push({ t: now, k: 'evt', e: 'train_stopped' }); stats.stops++; lastStopEvt = now; }
