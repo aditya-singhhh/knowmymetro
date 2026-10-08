@@ -188,7 +188,7 @@ export class LiveTracker {
       }
       const end = L.stops[L.stops.length - 1].km;
       // still on the platform after a change (not boarded yet): our position says nothing about the train's delay
-      if (this.riding && li > 0 && this.boardedLeg < li && km <= 0.3) { this.offLine = false; return; }
+      if (this.riding && li > 0 && this.boardedLeg < li && km <= 0.3) { this.offLine = false; this.platformFix = t; return; }
       if (km > 0.3 && this.boardedLeg < li && li > 0) this.identify = li;   // which train we boarded: settle on the first good fix
       const justBoarded = km > 0.3 && this.identify === li && accuracy <= 60;
       if (km > 0.3) this.boardedLeg = Math.max(this.boardedLeg, li);
@@ -203,11 +203,18 @@ export class LiveTracker {
         this.delay = t - L.stops[zone].dep; this.source = 'gps'; this.lastReading = t;
         return;
       }
+      // on board, still at the station we boarded: the train hasn't left, and doesn't leave early
+      if (zone === 0 && this.boardedLeg >= li && accuracy <= 60) {
+        this.delay = Math.max(this.delay, t - L.stops[0].dep, 0); this.source = 'gps'; this.lastReading = t;
+        return;
+      }
       let d = delayAt(L.stops, km, t);
       if (d == null) {
         // standing at a station within its timetable window: the delay must fit that window
         const st = L.stops.reduce((a, b) => (Math.abs(b.km - km) < Math.abs(a.km - km) ? b : a));
-        this.delay = Math.min(Math.max(this.delay, t - st.dep), t - st.arr);
+        // where we boarded, the train hasn't left yet and won't leave early (8 Oct: an early tap at Majestic,
+        // then "next Chickpete" a minute before the train even came)
+        this.delay = st === L.stops[0] ? Math.max(this.delay, t - st.dep, 0) : Math.min(Math.max(this.delay, t - st.dep), t - st.arr);
         this.source = 'gps'; this.lastReading = t;
         return;
       }
@@ -287,6 +294,12 @@ export class LiveTracker {
       // stop three stations on, and the card jumped ahead)
       for (let k = sure ? 0 : 1; k <= (sure ? Math.min(4, L.stops.length - 1) : 1); k++) {
         const left = k === 0 ? t : t - (L.stops[k].arr - L.stops[0].dep);
+        // that train must have left after we could reach the platform (8 Oct: no walk felt, phone in hand; a tap
+        // 3.5 min after reaching Majestic fitted a train that left 1 min after we got off the other one)
+        // GPS still puts us on this platform: the tap can only be a train here (8 Oct: tapped at Majestic while
+        // waiting, and the card jumped to KR Market)
+        if (k > 0 && this.platformFix != null && t - this.platformFix < 90) continue;
+        if (k > 0 && this.lastWalkEnd == null && this.arrivedAt != null && left < this.arrivedAt + Math.min(this.changeNeed, 120)) continue;
         for (const off of this.offsets(L)) {
           const gap = k === 0 ? Math.abs(t + 30 - L.stops[0].dep - off) : Math.abs(t - L.stops[k].arr - off);
           if (gap > (k === 0 ? 120 : 90)) continue;
@@ -302,7 +315,8 @@ export class LiveTracker {
     // the screen shows this station now (never behind it)
     if (this.prog.li !== this.onLeg || this.prog.step < 2 * best.k) this.prog = { li: this.onLeg, step: 2 * best.k };
     // a tap is certain and the train is at the station now: take its delay as is
-    if (waiting || sure) { this.delay = best.k === 0 ? t + 30 - L.stops[0].dep : t - L.stops[best.k].arr; this.source = 'motion'; this.lastReading = t; return; }
+    // (trains don't leave early: a tap before the train is due means it's on time, not early)
+    if (waiting || sure) { this.delay = best.k === 0 ? Math.max(0, t + 30 - L.stops[0].dep) : t - L.stops[best.k].arr; this.source = 'motion'; this.lastReading = t; return; }
     this.update(t - L.stops[best.k].arr, 'motion', t);
   }
 
@@ -363,6 +377,8 @@ export class LiveTracker {
   /** Changing lines means walking to another platform: until we've walked, a felt departure is the old train. */
   private walked() { return this.walk?.to != null; }
   private lastWalkEnd: number | null = null;
+  /** last GPS fix that put us on the platform of a ride we haven't boarded yet */
+  private platformFix: number | null = null;
 
   /** The motion sensor felt the train pull away from a stop. */
   started(t: number) { this.lastStart = t; }

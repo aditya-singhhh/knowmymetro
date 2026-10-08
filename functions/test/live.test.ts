@@ -207,3 +207,28 @@ test('a door tap on the platform after a change means boarding here, not a stop 
   const st = lt.status(dep - 30);
   assert.equal(st.prev ?? st.next, P[0].stn, `shows ${st.phase} ${st.prev}/${st.next}`);
 });
+
+test('an early door tap while GPS still has us on the platform stays here and keeps the train on time', () => {
+  // no walk felt (phone in hand), GPS on the new platform, a tap any time while waiting (8 Oct, Majestic: the card
+  // jumped to KR Market, matching the tap to a train that had left before we got there)
+  const o = trip();
+  const make = () => {
+    const lt = new LiveTracker(tt, service, o.legs);
+    lt.riding = true;
+    const G = lt.legs[0].stops;
+    for (let t = G[0].dep + 60; t < G[G.length - 1].arr; t += 30) { const p = posAt(G, t); lt.fix(t, p.lat, p.lon, 15); }
+    return lt;
+  };
+  const G = make().legs[0].stops, P = make().legs[1].stops;
+  const s0 = tt.stations[P[0].stn];
+  const off = G[G.length - 1].arr + 10;
+  for (let tap = off + 130; tap <= off + 600; tap += 20) {
+    const lt = make();
+    lt.status(off + 30);
+    for (let t = off + 60; t < tap; t += 20) lt.fix(t, s0.lat + ((t / 20) % 5) * 1e-6, s0.lon, 20);
+    lt.stopped(tap, true);
+    const st = lt.status(tap + 5);
+    assert.equal(st.prev ?? st.next, P[0].stn, `tap +${tap - off}s shows ${st.phase} ${st.prev}/${st.next}`);
+    assert.ok(st.delay >= 0, `tap +${tap - off}s delay ${st.delay}`);
+  }
+});
